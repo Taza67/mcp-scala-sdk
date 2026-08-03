@@ -2,7 +2,11 @@ scalaVersion := "2.13.16"
 
 lazy val protocol = (project in file("modules/protocol"))
 
-lazy val server = (project in file("modules/server")).dependsOn(protocol)
+lazy val server = (project in file("modules/server"))
+  .dependsOn(protocol)
+  .settings(
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test
+  )
 
 lazy val transportStdio = (project in file("modules/transport/stdio")).dependsOn(server)
 

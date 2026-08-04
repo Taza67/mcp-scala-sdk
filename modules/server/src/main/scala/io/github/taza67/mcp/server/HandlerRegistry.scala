@@ -1,6 +1,6 @@
 package io.github.taza67.mcp.server
 
-import io.github.taza67.mcp.protocol.Method
+import io.github.taza67.mcp.protocol.jsonrpc.Method
 
 
 

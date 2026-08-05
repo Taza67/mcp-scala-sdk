@@ -17,31 +17,49 @@ import io.github.taza67.mcp.protocol.jsonrpc.{
 
 
 
-/** Common params for any request (SPECS RequestParams).
+/** Common parameters for any MCP request.
  *
- *  `_meta` is required. Method-specific fields live in `fields` (open bag).
+ *  `_meta` is required. Method-specific fields live in [[fields]] until typed
+ *  request-param ADTs are used for a given method.
+ *
+ *  @param meta Required request metadata (protocol version, client capabilities, …).
+ *  @param fields Open bag of method-specific parameter fields.
  */
 case class RequestParams(
     meta: RequestMeta,
     fields: JsonObject = JsonObject(Map.empty)
 )
 
-/** Common params for paginated requests (SPECS PaginatedRequestParams). */
+/** Common parameters for paginated list-style requests.
+ *
+ *  @param meta Required request metadata.
+ *  @param cursor Opaque pagination position; when set, the server returns results after it.
+ *  @param fields Open bag of additional method-specific fields.
+ */
 case class PaginatedRequestParams(
     meta: RequestMeta,
     cursor: Option[Cursor] = None,
     fields: JsonObject = JsonObject(Map.empty)
 )
 
-/** Common params for any notification (SPECS NotificationParams). */
+/** Common parameters for any MCP notification.
+ *
+ *  @param meta Optional notification metadata (e.g. subscription id).
+ *  @param fields Open bag of method-specific parameter fields.
+ */
 case class NotificationParams(
     meta: Option[NotificationMeta] = None,
     fields: JsonObject = JsonObject(Map.empty)
 )
 
-/** Common result fields (SPECS Result).
+/** Common MCP result fields shared by successful method responses.
  *
- *  `resultType` is required. Method-specific fields live in `fields` (open bag).
+ *  Servers for this protocol revision MUST include [[resultType]]. Clients talking
+ *  to older servers that omit it MUST treat the absent field as `"complete"`.
+ *
+ *  @param resultType Discriminant telling the client how to parse the result.
+ *  @param fields Open bag of method-specific result fields.
+ *  @param meta Optional result metadata (e.g. server info).
  */
 case class Result(
     resultType: ResultType,
@@ -51,17 +69,23 @@ case class Result(
 
 object Result {
 
-  /** A result that indicates success but carries no data (SPECS EmptyResult). */
+  /** Successful result that carries no method-specific data. */
   def empty(meta: Option[ResultMeta] = None): Result =
     Result(resultType = CompleteResultType, fields = JsonObject(Map.empty), meta = meta)
 }
 
-/** MCP-level message (mirrors JSON-RPC Message with MCP params/result). */
+/** MCP message with MCP-typed params/result, convertible to a JSON-RPC [[Message]]. */
 sealed trait McpMessage {
   def jsonrpc: JsonRpcVersion
   def toJsonRpc: Message
 }
 
+/** MCP request that expects an [[McpResponse]].
+ *
+ *  @param method Method name to invoke.
+ *  @param id Correlates this request with its response.
+ *  @param params MCP request parameters (`_meta` required when present).
+ */
 case class McpRequest(
     method: Method,
     id: RequestId,
@@ -72,6 +96,7 @@ case class McpRequest(
     Request(method = method, id = id, params = params.map(_.fields), jsonrpc = jsonrpc)
 }
 
+/** MCP notification that does not expect a response. */
 case class McpNotification(
     method: Method,
     params: Option[NotificationParams] = None,
@@ -81,11 +106,13 @@ case class McpNotification(
     Notification(method = method, params = params.map(_.fields), jsonrpc = jsonrpc)
 }
 
+/** MCP response to an [[McpRequest]] (success or error). */
 sealed trait McpResponse extends McpMessage {
   def id: RequestId
   def toJsonRpc: Response
 }
 
+/** Successful MCP response carrying a [[Result]]. */
 case class McpSuccessResponse(
     result: Result,
     id: RequestId,
@@ -95,6 +122,7 @@ case class McpSuccessResponse(
     SuccessResponse(result = result.fields, id = id, jsonrpc = jsonrpc)
 }
 
+/** MCP error response carrying a JSON-RPC [[Error]]. */
 case class McpErrorResponse(
     error: Error,
     id: RequestId,

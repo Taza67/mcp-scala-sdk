@@ -4,13 +4,23 @@ import io.github.taza67.mcp.protocol.json.{JsonArray, JsonObject, JsonString, Js
 
 
 
-/** JSON-RPC / MCP error object (SPECS Error). */
+/** JSON-RPC 2.0 error object carried by an [[ErrorResponse]].
+ *
+ *  @see [[https://www.jsonrpc.org/specification#error_object JSON-RPC 2.0 Error Object]]
+ */
 sealed trait Error {
+
+  /** The error type that occurred. */
   def code: Int
+
+  /** Short description of the error. SHOULD be a concise single sentence. */
   def message: String
+
+  /** Additional information defined by the sender (details, nested errors, …). */
   def data: Option[JsonValue]
 }
 
+/** Standard and MCP-defined JSON-RPC error codes. */
 object ErrorCode {
   val ParseError: Int = -32700
   val InvalidRequest: Int = -32600
@@ -18,17 +28,17 @@ object ErrorCode {
   val InvalidParams: Int = -32602
   val InternalError: Int = -32603
 
-  /** SPECS HEADER_MISMATCH */
+  /** HTTP headers do not match the request body, or required headers are missing/malformed. */
   val HeaderMismatch: Int = -32020
 
-  /** SPECS MISSING_REQUIRED_CLIENT_CAPABILITY */
+  /** Server requires a client capability that was not declared in `clientCapabilities`. */
   val MissingRequiredClientCapability: Int = -32021
 
-  /** SPECS UNSUPPORTED_PROTOCOL_VERSION */
+  /** Request protocol version is unknown or unsupported by the server. */
   val UnsupportedProtocolVersion: Int = -32022
 }
 
-/** Invalid JSON was received (SPECS ParseError). */
+/** Invalid JSON was received by the server and could not be parsed. */
 case class ParseError(
     message: String = "Parse error: Invalid JSON",
     data: Option[JsonValue] = None
@@ -36,7 +46,9 @@ case class ParseError(
   val code: Int = ErrorCode.ParseError
 }
 
-/** Request is not a valid JSON-RPC request object (SPECS InvalidRequestError). */
+/** The message is not a valid JSON-RPC request object
+ *  (missing `jsonrpc` / `method`, wrong types, …).
+ */
 case class InvalidRequestError(
     message: String = "Invalid Request",
     data: Option[JsonValue] = None
@@ -44,7 +56,12 @@ case class InvalidRequestError(
   val code: Int = ErrorCode.InvalidRequest
 }
 
-/** Method does not exist or is not available (SPECS MethodNotFoundError). */
+/** The requested method does not exist or is not available.
+ *
+ *  In MCP this covers unknown methods and methods gated behind a server
+ *  capability the server did not advertise. Missing ''client'' capabilities
+ *  use [[MissingRequiredClientCapabilityError]] (`-32021`) instead.
+ */
 case class MethodNotFoundError(
     message: String = "Method not found",
     data: Option[JsonValue] = None
@@ -52,7 +69,9 @@ case class MethodNotFoundError(
   val code: Int = ErrorCode.MethodNotFound
 }
 
-/** Method parameters are invalid or malformed (SPECS InvalidParamsError). */
+/** Method parameters are invalid or malformed
+ *  (unknown tool/prompt name, bad cursor, invalid arguments, …).
+ */
 case class InvalidParamsError(
     message: String = "Invalid params",
     data: Option[JsonValue] = None
@@ -60,7 +79,7 @@ case class InvalidParamsError(
   val code: Int = ErrorCode.InvalidParams
 }
 
-/** Unexpected condition on the receiver (SPECS InternalError). */
+/** Unexpected condition on the receiver that prevents fulfilling the request. */
 case class InternalError(
     message: String = "Internal error",
     data: Option[JsonValue] = None
@@ -68,7 +87,9 @@ case class InternalError(
   val code: Int = ErrorCode.InternalError
 }
 
-/** HTTP headers do not match the request body (SPECS error code HEADER_MISMATCH). */
+/** HTTP headers do not match corresponding body values, or required headers
+ *  are missing or malformed. For HTTP, the response status MUST be `400 Bad Request`.
+ */
 case class HeaderMismatchError(
     message: String,
     data: Option[JsonValue] = None
@@ -76,7 +97,11 @@ case class HeaderMismatchError(
   val code: Int = ErrorCode.HeaderMismatch
 }
 
-/** Server requires a client capability not declared in the request (SPECS -32021). */
+/** Processing the request requires a client capability not declared in
+ *  `clientCapabilities`. For HTTP, the response status MUST be `400 Bad Request`.
+ *
+ *  @param requiredCapabilities Capabilities the server needed for this request.
+ */
 case class MissingRequiredClientCapabilityError(
     message: String,
     requiredCapabilities: JsonObject
@@ -86,7 +111,12 @@ case class MissingRequiredClientCapabilityError(
     Some(JsonObject(Map("requiredCapabilities" -> requiredCapabilities)))
 }
 
-/** Request protocol version is unsupported (SPECS -32022). */
+/** The request's protocol version is unknown or unsupported by the server.
+ *  For HTTP, the response status MUST be `400 Bad Request`.
+ *
+ *  @param supported Protocol versions this server accepts.
+ *  @param requested Protocol version sent by the client.
+ */
 case class UnsupportedProtocolVersionError(
     message: String = "Unsupported protocol version",
     supported: List[String],
@@ -103,7 +133,7 @@ case class UnsupportedProtocolVersionError(
   )
 }
 
-/** Application-defined or unrecognized error code. */
+/** Application-defined or unrecognized error code outside the standard set. */
 case class ApplicationError(
     code: Int,
     message: String,

@@ -20,6 +20,68 @@ sealed trait Error {
   def data: Option[JsonValue]
 }
 
+object Error {
+
+  /** Classify a JSON-RPC error payload into the typed hierarchy.
+   *
+   *  Known codes become dedicated case classes. Structured MCP errors that lack
+   *  the expected `data` shape fall back to [[ApplicationError]] so wire data is
+   *  preserved. Unknown codes also become [[ApplicationError]].
+   */
+  def classify(code: Int, message: String, data: Option[JsonValue]): Error =
+    code match {
+      case ErrorCode.ParseError =>
+        ParseError(message, data)
+      case ErrorCode.InvalidRequest =>
+        InvalidRequestError(message, data)
+      case ErrorCode.MethodNotFound =>
+        MethodNotFoundError(message, data)
+      case ErrorCode.InvalidParams =>
+        InvalidParamsError(message, data)
+      case ErrorCode.InternalError =>
+        InternalError(message, data)
+      case ErrorCode.HeaderMismatch =>
+        HeaderMismatchError(message, data)
+      case ErrorCode.MissingRequiredClientCapability =>
+        requiredCapabilitiesFromData(data)
+          .map(MissingRequiredClientCapabilityError(message, _))
+          .getOrElse(ApplicationError(code, message, data))
+      case ErrorCode.UnsupportedProtocolVersion =>
+        unsupportedProtocolVersionFromData(data)
+          .map { case (supported, requested) =>
+            UnsupportedProtocolVersionError(message, supported, requested)
+          }
+          .getOrElse(ApplicationError(code, message, data))
+      case _ =>
+        ApplicationError(code, message, data)
+    }
+
+  private def requiredCapabilitiesFromData(data: Option[JsonValue]): Option[JsonObject] =
+    data.collect { case JsonObject(fields) =>
+      fields.get("requiredCapabilities").collect { case caps: JsonObject => caps }
+    }.flatten
+
+  private def unsupportedProtocolVersionFromData(
+      data: Option[JsonValue]
+  ): Option[(List[String], String)] =
+    data.collect { case JsonObject(fields) =>
+      for {
+        supportedValue <- fields.get("supported")
+        requestedValue <- fields.get("requested")
+        supported <- supportedValue match {
+          case JsonArray(values) =>
+            val strings = values.collect { case JsonString(s) => s }
+            if (strings.size == values.size) Some(strings) else None
+          case _ => None
+        }
+        requested <- requestedValue match {
+          case JsonString(s) => Some(s)
+          case _             => None
+        }
+      } yield (supported, requested)
+    }.flatten
+}
+
 /** Standard and MCP-defined JSON-RPC error codes. */
 object ErrorCode {
   val ParseError: Int = -32700

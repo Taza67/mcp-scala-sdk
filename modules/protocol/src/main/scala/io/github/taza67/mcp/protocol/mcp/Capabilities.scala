@@ -4,43 +4,6 @@ import io.github.taza67.mcp.protocol.json.JsonObject
 
 
 
-/** Severity of a log message (syslog / RFC-5424).
- *
- *  @see [[https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1 RFC 5424 §6.2.1]]
- *  @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months.
- */
-sealed trait LoggingLevel {
-  def value: String
-}
-
-case object DebugLoggingLevel extends LoggingLevel { val value = "debug" }
-case object InfoLoggingLevel extends LoggingLevel { val value = "info" }
-case object NoticeLoggingLevel extends LoggingLevel { val value = "notice" }
-case object WarningLoggingLevel extends LoggingLevel { val value = "warning" }
-case object ErrorLoggingLevel extends LoggingLevel { val value = "error" }
-case object CriticalLoggingLevel extends LoggingLevel { val value = "critical" }
-case object AlertLoggingLevel extends LoggingLevel { val value = "alert" }
-case object EmergencyLoggingLevel extends LoggingLevel { val value = "emergency" }
-
-/** Describes a client or server MCP implementation.
- *
- *  @param name Programmatic / logical name; also display fallback when `title` is absent.
- *  @param version Implementation version string.
- *  @param title Human-readable title for UI contexts.
- *  @param description Optional description of purpose and capabilities.
- *  @param websiteUrl Optional website URL.
- *  @param icons Optional UI icons. Clients that render icons MUST support `image/png`
- *               and `image/jpeg`; SHOULD also support `image/svg+xml` and `image/webp`.
- */
-case class Implementation(
-    name: String,
-    version: String,
-    title: Option[String] = None,
-    description: Option[String] = None,
-    websiteUrl: Option[String] = None,
-    icons: Option[List[Icon]] = None
-)
-
 /** Client support for sampling from an LLM.
  *
  *  @param context Whether the client supports context inclusion via `includeContext`.
@@ -79,6 +42,13 @@ case class ClientCapabilities(
     elicitation: Option[ElicitationCapability] = None,
     extensions: Option[Map[String, JsonObject]] = None
 )
+
+object ClientCapabilities {
+
+  /** Top-level wire keys with dedicated fields (including nested `extensions`). */
+  val KnownKeys: Set[String] =
+    Set("experimental", "roots", "sampling", "elicitation", "extensions")
+}
 
 /** Present if the server offers prompt templates.
  *

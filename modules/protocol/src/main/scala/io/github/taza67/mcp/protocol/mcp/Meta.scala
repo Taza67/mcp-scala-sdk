@@ -1,8 +1,26 @@
 package io.github.taza67.mcp.protocol.mcp
 
+import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 
 
+
+/** Contents of a `_meta` field: open metadata attached to MCP interactions.
+ *
+ *  Certain key names are reserved for protocol-level metadata; implementations
+ *  MUST NOT assume meanings for reserved keys beyond what the protocol defines.
+ *
+ *  Valid keys have an optional reverse-DNS '''prefix''' ending with `/`, then a
+ *  '''name'''. Prefixes whose second label is `modelcontextprotocol` or `mcp`
+ *  are reserved for MCP use.
+ *
+ *  @param value Arbitrary metadata entries keyed by string.
+ */
+case class MetaObject(value: Map[String, JsonValue] = Map.empty)
+
+object MetaObject {
+  val empty: MetaObject = MetaObject()
+}
 
 /** Opaque token associating progress notifications with the original request. */
 sealed trait ProgressToken
@@ -19,6 +37,17 @@ case class NumberProgressToken(value: Long) extends ProgressToken
  */
 sealed trait ResultType {
   def value: String
+}
+
+object ResultType {
+
+  /** Classify a wire `resultType` string (unknown values become [[CustomResultType]]). */
+  def fromValue(value: String): ResultType =
+    value match {
+      case CompleteResultType.value      => CompleteResultType
+      case InputRequiredResultType.value => InputRequiredResultType
+      case other                         => CustomResultType(other)
+    }
 }
 
 /** The request completed successfully; the result contains the final content. */
@@ -60,6 +89,24 @@ case class RequestMeta(
     extensions: MetaObject = MetaObject.empty
 )
 
+/** Wire key names for [[RequestMeta]] (schema vocabulary; assembly stays in codec). */
+object RequestMeta {
+  val ProgressTokenKey: String = "progressToken"
+  val ProtocolVersionKey: String = "io.modelcontextprotocol/protocolVersion"
+  val ClientInfoKey: String = "io.modelcontextprotocol/clientInfo"
+  val ClientCapabilitiesKey: String = "io.modelcontextprotocol/clientCapabilities"
+  val LogLevelKey: String = "io.modelcontextprotocol/logLevel"
+
+  /** All reserved wire keys; used to split/sanitize [[RequestMeta.extensions]]. */
+  val ReservedKeys: Set[String] = Set(
+    ProgressTokenKey,
+    ProtocolVersionKey,
+    ClientInfoKey,
+    ClientCapabilitiesKey,
+    LogLevelKey
+  )
+}
+
 /** Notification `_meta`, including optional subscription correlation.
  *
  *  @param subscriptionId JSON-RPC id of the `subscriptions/listen` request that opened
@@ -72,6 +119,15 @@ case class NotificationMeta(
     extensions: MetaObject = MetaObject.empty
 )
 
+object NotificationMeta {
+
+  /** Wire key names for [[NotificationMeta]] (schema vocabulary; assembly stays in codec). */
+  val SubscriptionIdKey: String = "io.modelcontextprotocol/subscriptionId"
+
+  /** All reserved wire keys; used to split/sanitize [[NotificationMeta.extensions]]. */
+  val ReservedKeys: Set[String] = Set(SubscriptionIdKey)
+}
+
 /** Result `_meta` attached to successful MCP results.
  *
  *  @param serverInfo Self-reported server software identity. Servers SHOULD include it
@@ -82,3 +138,12 @@ case class ResultMeta(
     serverInfo: Option[Implementation] = None,
     extensions: MetaObject = MetaObject.empty
 )
+
+object ResultMeta {
+
+  /** Wire key names for [[ResultMeta]] (schema vocabulary; assembly stays in codec). */
+  val ServerInfoKey: String = "io.modelcontextprotocol/serverInfo"
+
+  /** All reserved wire keys; used to split/sanitize [[ResultMeta.extensions]]. */
+  val ReservedKeys: Set[String] = Set(ServerInfoKey)
+}

@@ -2,7 +2,8 @@ package io.github.taza67.mcp.protocol.mcp.sampling
 
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
-import io.github.taza67.mcp.protocol.mcp.{McpRequest, MetaObject, Role, Tool}
+import io.github.taza67.mcp.protocol.mcp.{McpRequest, MetaObject, Role}
+import io.github.taza67.mcp.protocol.mcp.tools.Tool
 
 
 

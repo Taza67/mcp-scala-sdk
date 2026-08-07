@@ -74,9 +74,16 @@ object Result {
     Result(resultType = CompleteResultType, fields = JsonObject(Map.empty), meta = meta)
 }
 
-/** MCP message with MCP-typed params/result, convertible to a JSON-RPC [[Message]]. */
+/** MCP message with MCP-typed params/result, convertible to a JSON-RPC [[Message]].
+ *
+ *  [[toJsonRpc]] is a '''partial''' envelope view: it does not merge `_meta`,
+ *  `resultType`, or other lifted MCP fields into the wire object. Wire-correct
+ *  projection belongs in `modules/codec` (ADR-0004, ADR-0006).
+ */
 sealed trait McpMessage {
   def jsonrpc: JsonRpcVersion
+
+  /** Partial JSON-RPC view (method-specific / `_meta` merge not applied). */
   def toJsonRpc: Message
 }
 
@@ -92,6 +99,8 @@ case class McpRequest(
     params: Option[RequestParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends McpMessage {
+
+  /** Partial JSON-RPC view: emits `params.fields` only (drops `_meta`). */
   def toJsonRpc: Request =
     Request(method = method, id = id, params = params.map(_.fields), jsonrpc = jsonrpc)
 }
@@ -102,6 +111,8 @@ case class McpNotification(
     params: Option[NotificationParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends McpMessage {
+
+  /** Partial JSON-RPC view: emits `params.fields` only (drops `_meta`). */
   def toJsonRpc: Notification =
     Notification(method = method, params = params.map(_.fields), jsonrpc = jsonrpc)
 }
@@ -118,6 +129,8 @@ case class McpSuccessResponse(
     id: RequestId,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends McpResponse {
+
+  /** Partial JSON-RPC view: emits `result.fields` only (drops `resultType` / `_meta`). */
   def toJsonRpc: SuccessResponse =
     SuccessResponse(result = result.fields, id = id, jsonrpc = jsonrpc)
 }

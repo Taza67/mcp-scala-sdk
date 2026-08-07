@@ -1,6 +1,7 @@
 package io.github.taza67.mcp.codec.jsonrpc
 
 import io.github.taza67.mcp.codec.DecodingError
+import io.github.taza67.mcp.codec.Fields
 import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
@@ -23,7 +24,7 @@ object Messages {
       "id" -> Primitives.fromRequestId(request.id),
       "jsonrpc" -> Primitives.fromJsonRpcVersion(request.jsonrpc)
     )
-    JsonObject(Fields.withOptional(base, "params", request.params))
+    JsonObject(Fields.withOptional(base, "params" -> request.params))
   }
 
   private def fromNotification(notification: Notification): JsonObject = {
@@ -32,7 +33,7 @@ object Messages {
         "method" -> Primitives.fromMethod(notification.method),
         "jsonrpc" -> Primitives.fromJsonRpcVersion(notification.jsonrpc)
       )
-    JsonObject(Fields.withOptional(base, "params", notification.params))
+    JsonObject(Fields.withOptional(base, "params" -> notification.params))
   }
 
   private def fromSuccessResponse(successResponse: SuccessResponse): JsonObject =
@@ -49,7 +50,7 @@ object Messages {
       "code" -> JsonNumber(error.code),
       "message" -> JsonString(error.message)
     )
-    JsonObject(Fields.withOptional(base, "data", error.data))
+    JsonObject(Fields.withOptional(base, "data" -> error.data))
   }
 
   private def fromErrorResponse(errorResponse: ErrorResponse): JsonObject =

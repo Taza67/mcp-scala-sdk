@@ -1,5 +1,6 @@
-package io.github.taza67.mcp.protocol.mcp
+package io.github.taza67.mcp.protocol.mcp.subscriptions
 
+import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
 

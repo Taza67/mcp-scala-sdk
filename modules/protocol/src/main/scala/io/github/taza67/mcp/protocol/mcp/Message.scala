@@ -1,19 +1,11 @@
 package io.github.taza67.mcp.protocol.mcp
 
 import io.github.taza67.mcp.protocol.json.JsonObject
-import io.github.taza67.mcp.protocol.jsonrpc.{
-  Error,
-  ErrorResponse,
-  JsonRpcVersion,
-  JsonRpcVersion20,
-  Message,
-  Method,
-  Notification,
-  Request,
-  RequestId,
-  Response,
-  SuccessResponse
-}
+import io.github.taza67.mcp.protocol.jsonrpc.Error
+import io.github.taza67.mcp.protocol.jsonrpc.JsonRpcVersion
+import io.github.taza67.mcp.protocol.jsonrpc.JsonRpcVersion20
+import io.github.taza67.mcp.protocol.jsonrpc.Method
+import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 
 
 
@@ -29,6 +21,12 @@ case class RequestParams(
     meta: RequestMeta,
     fields: JsonObject = JsonObject(Map.empty)
 )
+
+object RequestParams {
+
+  /** Wire key for request metadata inside JSON-RPC `params`. */
+  val MetaKey: String = "_meta"
+}
 
 /** Common parameters for paginated list-style requests.
  *
@@ -52,6 +50,12 @@ case class NotificationParams(
     fields: JsonObject = JsonObject(Map.empty)
 )
 
+object NotificationParams {
+
+  /** Wire key for notification metadata inside JSON-RPC `params`. */
+  val MetaKey: String = RequestParams.MetaKey
+}
+
 /** Common MCP result fields shared by successful method responses.
  *
  *  Servers for this protocol revision MUST include [[resultType]]. Clients talking
@@ -69,22 +73,24 @@ case class Result(
 
 object Result {
 
+  /** Wire key for the result discriminant inside JSON-RPC `result`. */
+  val ResultTypeKey: String = "resultType"
+
+  /** Wire key for result metadata inside JSON-RPC `result`. */
+  val MetaKey: String = RequestParams.MetaKey
+
   /** Successful result that carries no method-specific data. */
   def empty(meta: Option[ResultMeta] = None): Result =
     Result(resultType = CompleteResultType, fields = JsonObject(Map.empty), meta = meta)
 }
 
-/** MCP message with MCP-typed params/result, convertible to a JSON-RPC [[Message]].
+/** MCP message with MCP-typed params/result.
  *
- *  [[toJsonRpc]] is a '''partial''' envelope view: it does not merge `_meta`,
- *  `resultType`, or other lifted MCP fields into the wire object. Wire-correct
- *  projection belongs in `modules/codec` (ADR-0004, ADR-0006).
+ *  Wire projection (`JsonObject` / JSON text) lives in `modules/codec`
+ *  (ADR-0004, ADR-0006), not on these ADTs.
  */
 sealed trait McpMessage {
   def jsonrpc: JsonRpcVersion
-
-  /** Partial JSON-RPC view (method-specific / `_meta` merge not applied). */
-  def toJsonRpc: Message
 }
 
 /** MCP request that expects an [[McpResponse]].
@@ -98,29 +104,18 @@ case class McpRequest(
     id: RequestId,
     params: Option[RequestParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) extends McpMessage {
-
-  /** Partial JSON-RPC view: emits `params.fields` only (drops `_meta`). */
-  def toJsonRpc: Request =
-    Request(method = method, id = id, params = params.map(_.fields), jsonrpc = jsonrpc)
-}
+) extends McpMessage
 
 /** MCP notification that does not expect a response. */
 case class McpNotification(
     method: Method,
     params: Option[NotificationParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) extends McpMessage {
-
-  /** Partial JSON-RPC view: emits `params.fields` only (drops `_meta`). */
-  def toJsonRpc: Notification =
-    Notification(method = method, params = params.map(_.fields), jsonrpc = jsonrpc)
-}
+) extends McpMessage
 
 /** MCP response to an [[McpRequest]] (success or error). */
 sealed trait McpResponse extends McpMessage {
   def id: RequestId
-  def toJsonRpc: Response
 }
 
 /** Successful MCP response carrying a [[Result]]. */
@@ -128,19 +123,11 @@ case class McpSuccessResponse(
     result: Result,
     id: RequestId,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) extends McpResponse {
-
-  /** Partial JSON-RPC view: emits `result.fields` only (drops `resultType` / `_meta`). */
-  def toJsonRpc: SuccessResponse =
-    SuccessResponse(result = result.fields, id = id, jsonrpc = jsonrpc)
-}
+) extends McpResponse
 
 /** MCP error response carrying a JSON-RPC [[Error]]. */
 case class McpErrorResponse(
     error: Error,
     id: RequestId,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) extends McpResponse {
-  def toJsonRpc: ErrorResponse =
-    ErrorResponse(error = error, id = id, jsonrpc = jsonrpc)
-}
+) extends McpResponse

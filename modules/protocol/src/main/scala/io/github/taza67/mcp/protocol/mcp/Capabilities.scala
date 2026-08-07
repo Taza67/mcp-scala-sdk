@@ -97,3 +97,18 @@ case class ServerCapabilities(
     tools: Option[ToolsCapability] = None,
     extensions: Option[Map[String, JsonObject]] = None
 )
+
+object ServerCapabilities {
+
+  /** Top-level wire keys with dedicated fields (including nested `extensions`). */
+  val KnownKeys: Set[String] =
+    Set(
+      "experimental",
+      "logging",
+      "completions",
+      "prompts",
+      "resources",
+      "tools",
+      "extensions"
+    )
+}

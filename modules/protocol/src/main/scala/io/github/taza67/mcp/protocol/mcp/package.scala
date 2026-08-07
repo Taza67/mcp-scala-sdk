@@ -10,6 +10,7 @@ package io.github.taza67.mcp.protocol
  *  Domain helpers named `toMcpRequest` / `toMcpNotification` / `toMcpResponse`
  *  are '''partial''' lifts: they set method / id / meta scaffolding but do not
  *  yet project method-specific fields into `fields` (ADR-0006 codec WIP).
- *  [[mcp.McpMessage.toJsonRpc]] is likewise a partial envelope view.
+ *  Wire envelopes are projected only via `modules/codec` (no `toJsonRpc` on
+ *  [[mcp.McpMessage]]).
  */
 package object mcp

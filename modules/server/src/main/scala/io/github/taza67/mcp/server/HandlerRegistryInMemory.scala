@@ -4,6 +4,7 @@ import io.github.taza67.mcp.protocol.jsonrpc.Method
 
 
 
+/** In-memory [[HandlerRegistry]] backed by an immutable method map. */
 case class HandlerRegistryInMemory(registry: Map[Method, Handler]) extends HandlerRegistry {
 
   override def find(method: Method): Option[Handler] = registry.get(method)

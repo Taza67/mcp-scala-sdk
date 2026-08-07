@@ -10,6 +10,7 @@ import io.github.taza67.mcp.protocol.mcp.{
 
 
 
+/** Synchronous MCP request dispatcher over a [[HandlerRegistry]]. */
 case class McpServer(handlerRegistry: HandlerRegistry) extends Server {
 
   override def handle(request: McpRequest): McpResponse = {

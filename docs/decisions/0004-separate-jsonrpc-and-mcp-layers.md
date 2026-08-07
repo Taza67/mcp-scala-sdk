@@ -33,10 +33,10 @@ This decision is reflected in commit `6854927` (`refactor: separate JSON-RPC and
 ### Consequences
 
 * Good, because JSON-RPC `Request` / `Notification` / `Response` stay free of MCP `_meta` and use `JsonStructure` for `params` (object or array only).
-* Good, because MCP exposes `McpRequest` / `McpNotification` / `McpResponse` (and related params/result/meta) with `toJsonRpc` for a later codec path.
+* Good, because MCP exposes `McpRequest` / `McpNotification` / `McpResponse` (and related params/result/meta) as ADTs without pretending to own wire assembly.
 * Good, because the shared JSON AST lives under `protocol.json` and serves both layers (ADR-0003).
 * Bad, because callers must import the right package and map between MCP and JSON-RPC when encoding.
-* Bad, because `toJsonRpc` does not yet merge lifted `_meta` back into the JSON object (deferred to codec work).
+* Note: an early `toJsonRpc` on MCP messages was removed once codecs landed — it dropped `_meta` / `resultType` and competed with the honest path in `modules/codec` (ADR-0006).
 
 ### Confirmation
 
@@ -59,7 +59,7 @@ This decision is reflected in commit `6854927` (`refactor: separate JSON-RPC and
 * Good, because one `protocol` artifact stays simple for early delivery.
 * Good, because MCP can evolve (`ClosedMeta`, `McpProtocolVersion`, …) without rewriting JSON-RPC.
 * Bad, because more files and renaming for existing call sites.
-* Bad, because conversion (`toJsonRpc`) must stay honest as codecs land.
+* Bad, because any protocol-side wire helper must stay honest or be removed once codecs land.
 
 ### Separate sbt modules now
 

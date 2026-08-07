@@ -89,7 +89,7 @@ This decision **clarifies** ADR-0003’s “codecs live outside protocol”: “
 ## More Information
 
 * Related: [ADR-0003](0003-protocol-json-ast-without-codec-dependency.md) (AST in `protocol`; vendor codecs outside)
-* Related: [ADR-0004](0004-separate-jsonrpc-and-mcp-layers.md) (JSON-RPC vs MCP; `toJsonRpc` meta merge still incomplete)
+* Related: [ADR-0004](0004-separate-jsonrpc-and-mcp-layers.md) (JSON-RPC vs MCP; dishonest `toJsonRpc` removed in favor of codec projection)
 * Related: [ADR-0005](0005-protocol-modeling-from-mcp-2026-07-28-specs.md) (layer build order)
 * Evidence in tree: `Error.classify` in `protocol.jsonrpc`; `codec.jsonrpc.Messages` for envelopes; Circe `JsonCodec` / `JsonRpcCodec` as String façades
 * Revisit if a supported product use case requires ADT↔AST with a `protocol`-only dependency, or if `modules/codec` should be renamed/published as a dedicated `mcp-schema` / `mcp-ast` artifact for clarity

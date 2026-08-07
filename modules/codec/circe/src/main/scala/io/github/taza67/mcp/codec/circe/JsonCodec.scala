@@ -2,56 +2,53 @@ package io.github.taza67.mcp.codec.circe
 
 import io.circe.{Json => CirceJson, JsonObject => CirceJsonObject}
 import io.circe.parser.{parse => circeParse}
-import io.github.taza67.mcp.codec.{Decoder => McpCodecDecoder, Encoder => McpCodecEncoder}
+import io.github.taza67.mcp.codec.{Decoder => CodecDecoder, Encoder => CodecEncoder}
 import io.github.taza67.mcp.codec.DecodingError
-import io.github.taza67.mcp.protocol.json.{
-  JsonArray => ProtocolJsonArray,
-  JsonBool => ProtocolJsonBool,
-  JsonNull => ProtocolJsonNull,
-  JsonNumber => ProtocolJsonNumber,
-  JsonObject => ProtocolJsonObject,
-  JsonString => ProtocolJsonString,
-  JsonValue => ProtocolJsonValue
-}
+import io.github.taza67.mcp.protocol.json.JsonArray
+import io.github.taza67.mcp.protocol.json.JsonBool
+import io.github.taza67.mcp.protocol.json.JsonNull
+import io.github.taza67.mcp.protocol.json.JsonNumber
+import io.github.taza67.mcp.protocol.json.JsonObject
+import io.github.taza67.mcp.protocol.json.JsonString
+import io.github.taza67.mcp.protocol.json.JsonValue
 
 
 
-/** Circe bridge for the protocol JSON AST:
- *  [[io.github.taza67.mcp.protocol.json.JsonValue]] ↔ JSON text.
+/** Circe wire façade for protocol [[JsonValue]]: AST ↔ JSON text.
  *
  *  Keeps Circe confined to this module; the protocol AST stays codec-neutral.
  */
 object JsonCodec {
-  private def toCirce(v: ProtocolJsonValue): CirceJson =
+  private def toCirce(v: JsonValue): CirceJson =
     v match {
-      case ProtocolJsonNull      => CirceJson.Null
-      case ProtocolJsonBool(b)   => CirceJson.fromBoolean(b)
-      case ProtocolJsonNumber(n) => CirceJson.fromBigDecimal(n)
-      case ProtocolJsonString(s) => CirceJson.fromString(s)
-      case ProtocolJsonArray(a)  => CirceJson.fromValues(a.map(toCirce(_)))
-      case ProtocolJsonObject(o) =>
+      case JsonNull      => CirceJson.Null
+      case JsonBool(b)   => CirceJson.fromBoolean(b)
+      case JsonNumber(n) => CirceJson.fromBigDecimal(n)
+      case JsonString(s) => CirceJson.fromString(s)
+      case JsonArray(a)  => CirceJson.fromValues(a.map(toCirce(_)))
+      case JsonObject(o) =>
         CirceJson.fromJsonObject(CirceJsonObject.fromMap(o.transform { case (_, value) =>
           toCirce(value)
         }))
     }
 
-  implicit object JsonValueEncoder extends McpCodecEncoder[ProtocolJsonValue] {
-    def encode(value: ProtocolJsonValue): String =
+  implicit object JsonValueEncoder extends CodecEncoder[JsonValue] {
+    def encode(value: JsonValue): String =
       toCirce(value).noSpaces
   }
 
-  private def fromCirce(v: CirceJson): ProtocolJsonValue =
+  private def fromCirce(v: CirceJson): JsonValue =
     v.fold(
-      ProtocolJsonNull,
-      b => ProtocolJsonBool(b),
-      n => ProtocolJsonNumber(n.toBigDecimal.getOrElse(BigDecimal(n.toString))),
-      s => ProtocolJsonString(s),
-      a => ProtocolJsonArray(a.map(fromCirce).toList),
-      o => ProtocolJsonObject(o.toMap.transform { case (_, value) => fromCirce(value) })
+      JsonNull,
+      b => JsonBool(b),
+      n => JsonNumber(n.toBigDecimal.getOrElse(BigDecimal(n.toString))),
+      s => JsonString(s),
+      a => JsonArray(a.map(fromCirce).toList),
+      o => JsonObject(o.toMap.transform { case (_, value) => fromCirce(value) })
     )
 
-  implicit object JsonValueDecoder extends McpCodecDecoder[ProtocolJsonValue] {
-    def decode(value: String): Either[DecodingError, ProtocolJsonValue] =
+  implicit object JsonValueDecoder extends CodecDecoder[JsonValue] {
+    def decode(value: String): Either[DecodingError, JsonValue] =
       circeParse(value) match {
         case Left(e)  => Left(DecodingError(e.message))
         case Right(j) => Right(fromCirce(j))

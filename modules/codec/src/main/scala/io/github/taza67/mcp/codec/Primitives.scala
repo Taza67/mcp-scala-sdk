@@ -1,6 +1,7 @@
 package io.github.taza67.mcp.codec
 
 import io.github.taza67.mcp.protocol.json.JsonArray
+import io.github.taza67.mcp.protocol.json.JsonBool
 import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
@@ -16,6 +17,9 @@ private[codec] object Primitives {
   def fromList[A](items: List[A])(f: A => JsonValue): JsonArray =
     JsonArray(items.map(f))
 
+  def fromBool(value: Boolean): JsonBool =
+    JsonBool(value)
+
   def fromRequestId(requestId: RequestId): JsonValue =
     requestId match {
       case StringRequestId(value) => JsonString(value)
@@ -29,6 +33,15 @@ private[codec] object Primitives {
     value match {
       case JsonString(s) => Right(s)
       case _             => Left(DecodingError(s"Invalid $label: expected a string"))
+    }
+
+  def asBool(
+      value: JsonValue,
+      label: String = "boolean"
+  ): Either[DecodingError, Boolean] =
+    value match {
+      case JsonBool(b) => Right(b)
+      case _           => Left(DecodingError(s"Invalid $label: expected a boolean"))
     }
 
   def asArray(

@@ -48,6 +48,10 @@ object ResultType {
       case InputRequiredResultType.value => InputRequiredResultType
       case other                         => CustomResultType(other)
     }
+
+  /** Classify an optional wire `resultType` (absent → [[CompleteResultType]] for legacy servers). */
+  def fromWire(value: Option[String]): ResultType =
+    value.map(fromValue).getOrElse(CompleteResultType)
 }
 
 /** The request completed successfully; the result contains the final content. */

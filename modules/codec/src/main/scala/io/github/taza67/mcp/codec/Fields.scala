@@ -93,6 +93,12 @@ private[codec] object Fields {
   ): Either[DecodingError, Option[String]] =
     optional(fields, key)(Primitives.asString(_, key))
 
+  def optionalBool(
+      fields: Map[String, JsonValue],
+      key: String
+  ): Either[DecodingError, Option[Boolean]] =
+    optional(fields, key)(Primitives.asBool(_, key))
+
   /** Optional field that may be any JSON value (e.g. `error.data`). */
   def optionalValue(
       fields: Map[String, JsonValue],

@@ -1,0 +1,79 @@
+package io.github.taza67.mcp.codec.circe
+
+import io.github.taza67.mcp.codec.CodecAssertions
+import io.github.taza67.mcp.codec.TestSupport
+import io.github.taza67.mcp.protocol.json.JsonObject
+import io.github.taza67.mcp.protocol.json.JsonString
+import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
+import io.github.taza67.mcp.protocol.jsonrpc.Method
+import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
+import io.github.taza67.mcp.protocol.mcp.CompleteResultType
+import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
+import io.github.taza67.mcp.protocol.mcp.McpMessage
+import io.github.taza67.mcp.protocol.mcp.McpNotification
+import io.github.taza67.mcp.protocol.mcp.McpRequest
+import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
+import io.github.taza67.mcp.protocol.mcp.NotificationParams
+import io.github.taza67.mcp.protocol.mcp.RequestParams
+import io.github.taza67.mcp.protocol.mcp.Result
+import munit.FunSuite
+
+
+
+class McpCodecSuite extends FunSuite with CodecAssertions {
+
+  test("Invalid JSON returns an error") {
+    assert(McpCodec.MessageDecoder.decode("{").isLeft)
+  }
+
+  test("McpRequest decode rejects params without _meta") {
+    val raw =
+      """{"jsonrpc":"2.0","method":"tools/list","id":"1","params":{"cursor":"abc"}}"""
+    assert(McpCodec.MessageDecoder.decode(raw).isLeft)
+  }
+
+  test("McpRequest round-trips with _meta inside params") {
+    assertRoundTrip[McpMessage, String](
+      McpRequest(
+        method = Method("tools/list"),
+        id = StringRequestId("1"),
+        params = Some(
+          RequestParams(
+            meta = TestSupport.requestMeta,
+            fields = JsonObject(Map("cursor" -> JsonString("abc")))
+          )
+        )
+      )
+    )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+
+  test("McpNotification round-trips without _meta") {
+    assertRoundTrip[McpMessage, String](
+      McpNotification(
+        method = Method("notifications/initialized"),
+        params = Some(NotificationParams())
+      )
+    )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+
+  test("McpSuccessResponse round-trips with resultType") {
+    assertRoundTrip[McpMessage, String](
+      McpSuccessResponse(
+        result = Result(
+          resultType = CompleteResultType,
+          fields = JsonObject(Map("ok" -> JsonString("yes")))
+        ),
+        id = StringRequestId("1")
+      )
+    )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+
+  test("McpErrorResponse round-trips") {
+    assertRoundTrip[McpMessage, String](
+      McpErrorResponse(
+        error = ApplicationError(code = 42, message = "boom"),
+        id = StringRequestId("1")
+      )
+    )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+}

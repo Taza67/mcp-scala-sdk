@@ -1,8 +1,10 @@
 package io.github.taza67.mcp.protocol.mcp.tools
 
-import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.json.{JsonObject, JsonValue}
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
+import io.github.taza67.mcp.protocol.mcp._
+
+
 
 /** Method names for the tools domain. */
 object Tools {
@@ -98,6 +100,15 @@ case class CallToolRequestParams(
     inputResponses: Option[InputResponses] = None,
     requestState: Option[String] = None
 )
+
+object CallToolRequestParams {
+
+  /** Wire key for the tool name inside JSON-RPC `params`. */
+  val NameKey: String = "name"
+
+  /** Wire key for tool arguments inside JSON-RPC `params`. */
+  val ArgumentsKey: String = "arguments"
+}
 
 /** Used by the client to invoke a tool provided by the server. */
 case class CallToolRequest(

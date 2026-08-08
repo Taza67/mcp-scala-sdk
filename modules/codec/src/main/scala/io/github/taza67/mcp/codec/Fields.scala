@@ -51,9 +51,9 @@ private[codec] object Fields {
       .foldLeft[Either[DecodingError, List[(String, JsonObject)]]](Right(Nil)) {
         case (acc, (key, value)) =>
           for {
-            xs <- acc
+            entries <- acc
             nested <- asObject(value, s"$label.$key")
-          } yield (key -> nested) :: xs
+          } yield (key -> nested) :: entries
       }
       .map(_.reverse.toMap)
 

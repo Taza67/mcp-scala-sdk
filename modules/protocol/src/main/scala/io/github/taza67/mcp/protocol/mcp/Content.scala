@@ -14,6 +14,18 @@ sealed trait ResourceContents {
   def meta: Option[MetaObject]
 }
 
+object ResourceContents {
+
+  /** Wire key for the resource URI. */
+  val UriKey: String = "uri"
+
+  /** Wire key for optional MIME type. */
+  val MimeTypeKey: String = "mimeType"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
+
 /** Textual resource contents.
  *
  *  `text` MUST only be set when the item can actually be represented as text
@@ -31,6 +43,12 @@ case class TextResourceContents(
     meta: Option[MetaObject] = None
 ) extends ResourceContents
 
+object TextResourceContents {
+
+  /** Wire key for textual payload. */
+  val TextKey: String = "text"
+}
+
 /** Binary resource contents.
  *
  *  @param uri URI of this resource.
@@ -45,6 +63,12 @@ case class BlobResourceContents(
     meta: Option[MetaObject] = None
 ) extends ResourceContents
 
+object BlobResourceContents {
+
+  /** Wire key for base64 binary payload. */
+  val BlobKey: String = "blob"
+}
+
 /** Content block used in prompts and tool-call results.
  *
  *  One of [[TextContent]], [[ImageContent]], [[AudioContent]], [[ResourceLink]],
@@ -54,6 +78,18 @@ sealed trait ContentBlock {
   def contentType: String
   def annotations: Option[Annotations]
   def meta: Option[MetaObject]
+}
+
+object ContentBlock {
+
+  /** Wire key for the content-block discriminant. */
+  val TypeKey: String = "type"
+
+  /** Wire key for optional display / usage annotations. */
+  val AnnotationsKey: String = "annotations"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
 }
 
 /** Content block allowed in a sampling message.
@@ -83,6 +119,12 @@ case class TextContent(
   val contentType: String = "text"
 }
 
+object TextContent {
+
+  /** Wire key for the text payload. */
+  val TextKey: String = "text"
+}
+
 /** Image provided to or from an LLM.
  *
  *  @param data Base64-encoded image data.
@@ -100,6 +142,15 @@ case class ImageContent(
   val contentType: String = "image"
 }
 
+object ImageContent {
+
+  /** Wire key for base64 image data. */
+  val DataKey: String = "data"
+
+  /** Wire key for image MIME type. */
+  val MimeTypeKey: String = "mimeType"
+}
+
 /** Audio provided to or from an LLM.
  *
  *  @param data Base64-encoded audio data.
@@ -115,6 +166,15 @@ case class AudioContent(
 ) extends ContentBlock
     with SamplingMessageContentBlock {
   val contentType: String = "audio"
+}
+
+object AudioContent {
+
+  /** Wire key for base64 audio data. */
+  val DataKey: String = "data"
+
+  /** Wire key for audio MIME type. */
+  val MimeTypeKey: String = "mimeType"
 }
 
 /** A resource the server can read, included in a prompt or tool-call result.
@@ -146,6 +206,30 @@ case class ResourceLink(
   val contentType: String = "resource_link"
 }
 
+object ResourceLink {
+
+  /** Wire key for programmatic name. */
+  val NameKey: String = "name"
+
+  /** Wire key for resource URI. */
+  val UriKey: String = "uri"
+
+  /** Wire key for optional human-readable title. */
+  val TitleKey: String = "title"
+
+  /** Wire key for optional description. */
+  val DescriptionKey: String = "description"
+
+  /** Wire key for optional MIME type. */
+  val MimeTypeKey: String = "mimeType"
+
+  /** Wire key for optional raw size in bytes. */
+  val SizeKey: String = "size"
+
+  /** Wire key for optional UI icons. */
+  val IconsKey: String = "icons"
+}
+
 /** Resource contents embedded into a prompt or tool-call result.
  *
  *  It is up to the client how best to render embedded resources for the LLM
@@ -161,6 +245,12 @@ case class EmbeddedResource(
     meta: Option[MetaObject] = None
 ) extends ContentBlock {
   val contentType: String = "resource"
+}
+
+object EmbeddedResource {
+
+  /** Wire key for nested resource contents. */
+  val ResourceKey: String = "resource"
 }
 
 /** A request from the assistant to call a tool (sampling).
@@ -181,6 +271,18 @@ case class ToolUseContent(
   val contentType: String = "tool_use"
 }
 
+object ToolUseContent {
+
+  /** Wire key for the tool-use id. */
+  val IdKey: String = "id"
+
+  /** Wire key for the tool name. */
+  val NameKey: String = "name"
+
+  /** Wire key for tool input arguments. */
+  val InputKey: String = "input"
+}
+
 /** Result of a tool use, provided back to the assistant (sampling).
  *
  *  @param toolUseId Must match a prior [[ToolUseContent.id]].
@@ -199,4 +301,19 @@ case class ToolResultContent(
     meta: Option[MetaObject] = None
 ) extends SamplingMessageContentBlock {
   val contentType: String = "tool_result"
+}
+
+object ToolResultContent {
+
+  /** Wire key matching a prior [[ToolUseContent.id]]. */
+  val ToolUseIdKey: String = "toolUseId"
+
+  /** Wire key for unstructured result blocks. */
+  val ContentKey: String = "content"
+
+  /** Wire key for optional structured JSON result. */
+  val StructuredContentKey: String = "structuredContent"
+
+  /** Wire key for optional error flag. */
+  val IsErrorKey: String = "isError"
 }

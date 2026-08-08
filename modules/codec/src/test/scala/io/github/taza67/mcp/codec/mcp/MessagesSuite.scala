@@ -64,10 +64,7 @@ class MessagesSuite extends FunSuite with CodecAssertions {
       )
     )
     assertRoundTrip[McpMessage, JsonObject](message)(Messages.fromMessage, Messages.toMessage)
-    val params = Messages.fromMessage(message).value("params") match {
-      case o: JsonObject => o
-      case other         => fail(s"expected params object, got $other")
-    }
+    val params = paramsObject(Messages.fromMessage(message))
     assertEquals(params.value.get(PaginatedRequestParams.CursorKey), Some(JsonString("abc")))
   }
 

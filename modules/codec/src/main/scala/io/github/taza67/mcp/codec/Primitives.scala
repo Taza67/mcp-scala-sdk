@@ -3,6 +3,7 @@ package io.github.taza67.mcp.codec
 import io.github.taza67.mcp.protocol.json.JsonArray
 import io.github.taza67.mcp.protocol.json.JsonBool
 import io.github.taza67.mcp.protocol.json.JsonNumber
+import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.jsonrpc.NumberRequestId
@@ -20,11 +21,17 @@ private[codec] object Primitives {
   def fromBool(value: Boolean): JsonBool =
     JsonBool(value)
 
+  def fromDouble(value: Double): JsonNumber =
+    JsonNumber(BigDecimal.valueOf(value))
+
   def fromRequestId(requestId: RequestId): JsonValue =
     requestId match {
       case StringRequestId(value) => JsonString(value)
       case NumberRequestId(value) => JsonNumber(value)
     }
+
+  def fromStringMap(entries: Map[String, String]): JsonObject =
+    JsonObject(entries.map { case (key, value) => key -> JsonString(value) })
 
   def asString(
       value: JsonValue,
@@ -42,6 +49,15 @@ private[codec] object Primitives {
     value match {
       case JsonBool(b) => Right(b)
       case _           => Left(DecodingError(s"Invalid $label: expected a boolean"))
+    }
+
+  def asDouble(
+      value: JsonValue,
+      label: String = "number"
+  ): Either[DecodingError, Double] =
+    value match {
+      case JsonNumber(n) => Right(n.toDouble)
+      case _             => Left(DecodingError(s"Invalid $label: expected a number"))
     }
 
   def asArray(
@@ -105,12 +121,26 @@ private[codec] object Primitives {
       arr.value
         .foldLeft[Either[DecodingError, List[A]]](Right(Nil)) { (acc, elem) =>
           for {
-            xs <- acc
-            x <- f(elem)
-          } yield x :: xs
+            items <- acc
+            item <- f(elem)
+          } yield item :: items
         }
         .map(_.reverse)
     }
+
+  def toStringMap(
+      obj: JsonObject,
+      label: String
+  ): Either[DecodingError, Map[String, String]] =
+    obj.value
+      .foldLeft[Either[DecodingError, List[(String, String)]]](Right(Nil)) {
+        case (acc, (key, value)) =>
+          for {
+            entries <- acc
+            s <- asString(value, s"$label.$key")
+          } yield (key -> s) :: entries
+      }
+      .map(_.reverse.toMap)
 
   def toRequestId(requestId: JsonValue): Either[DecodingError, RequestId] =
     asStringOrLong(requestId, "request ID")(StringRequestId(_), NumberRequestId(_))

@@ -19,7 +19,9 @@ import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
 
 /** Protocol AST bridge for MCP [[McpMessage]] envelopes (`JsonObject` ↔ ADT).
  *
- *  Domain list requests: package [[lists]].
+ *  Domain façades: [[Content]] (content blocks), package [[lists]] (paginated
+ *  lists), packages [[tools]] / [[resources]] / [[prompts]] / [[elicitation]] /
+ *  [[roots]] / [[sampling]] (rich requests and results).
  */
 object Messages {
 

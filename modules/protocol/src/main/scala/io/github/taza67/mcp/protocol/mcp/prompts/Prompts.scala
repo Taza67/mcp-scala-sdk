@@ -1,7 +1,9 @@
 package io.github.taza67.mcp.protocol.mcp.prompts
 
-import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
+import io.github.taza67.mcp.protocol.mcp._
+
+
 
 /** Method names for the prompts domain. */
 object Prompts {
@@ -102,6 +104,15 @@ case class GetPromptRequestParams(
     inputResponses: Option[InputResponses] = None,
     requestState: Option[String] = None
 )
+
+object GetPromptRequestParams {
+
+  /** Wire key for the prompt name inside JSON-RPC `params`. */
+  val NameKey: String = "name"
+
+  /** Wire key for string-valued prompt arguments inside JSON-RPC `params`. */
+  val ArgumentsKey: String = "arguments"
+}
 
 /** Used by the client to get a prompt provided by the server. */
 case class GetPromptRequest(

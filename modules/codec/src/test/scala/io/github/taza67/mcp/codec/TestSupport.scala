@@ -1,5 +1,6 @@
 package io.github.taza67.mcp.codec
 
+import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.mcp.ClientCapabilities
 import io.github.taza67.mcp.protocol.mcp.Implementation
 import io.github.taza67.mcp.protocol.mcp.McpProtocolVersion20260728
@@ -29,4 +30,11 @@ private[codec] trait CodecAssertions { self: Assertions =>
       value: A
   )(encode: A => W, decode: W => Either[DecodingError, A]): Unit =
     assertEquals(decode(encode(value)), Right(value))
+
+  /** Extract the JSON-RPC `params` object from an encoded request envelope. */
+  protected def paramsObject(raw: JsonObject): JsonObject =
+    raw.value.get("params") match {
+      case Some(o: JsonObject) => o
+      case other               => fail(s"expected params object, got $other")
+    }
 }

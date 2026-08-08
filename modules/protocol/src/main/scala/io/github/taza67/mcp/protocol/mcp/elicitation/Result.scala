@@ -5,6 +5,18 @@ sealed trait ElicitAction {
   def value: String
 }
 
+object ElicitAction {
+
+  /** Classify a wire elicitation action string. */
+  def fromValue(value: String): Option[ElicitAction] =
+    value match {
+      case ElicitAccept.value  => Some(ElicitAccept)
+      case ElicitDecline.value => Some(ElicitDecline)
+      case ElicitCancel.value  => Some(ElicitCancel)
+      case _                   => None
+    }
+}
+
 /** User submitted the form / confirmed the action. */
 case object ElicitAccept extends ElicitAction { val value = "accept" }
 
@@ -35,3 +47,12 @@ case class ElicitResult(
     action: ElicitAction,
     content: Option[Map[String, ElicitContentValue]] = None
 )
+
+object ElicitResult {
+
+  /** Wire key for the user action. */
+  val ActionKey: String = "action"
+
+  /** Wire key for submitted form content. */
+  val ContentKey: String = "content"
+}

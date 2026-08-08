@@ -7,6 +7,7 @@ import io.github.taza67.mcp.protocol.mcp.elicitation.{
   ElicitRequestParams,
   ElicitResult
 }
+import io.github.taza67.mcp.protocol.mcp.roots.{ListRootsRequestParams, ListRootsResult, Roots}
 import io.github.taza67.mcp.protocol.mcp.sampling.{
   CreateMessageRequestParams,
   CreateMessageResult,
@@ -18,7 +19,8 @@ import io.github.taza67.mcp.protocol.mcp.sampling.{
 /** Nested request the client must fulfill as part of multi round-trip input.
  *
  *  Wire shape is `{ "method", "params" }` (no JSON-RPC `id` / `jsonrpc`). Known
- *  methods are elicitation and sampling; other methods use [[CustomInputRequest]].
+ *  methods are elicitation, sampling, and roots; other methods use
+ *  [[CustomInputRequest]].
  */
 sealed trait InputRequest {
   def method: Method
@@ -41,6 +43,16 @@ case class SamplingInputRequest(
   val method: Method = Sampling.createMessage
 }
 
+/** Nested `roots/list` request inside [[InputRequests]].
+ *
+ *  @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months.
+ */
+case class RootsInputRequest(
+    params: Option[ListRootsRequestParams] = None
+) extends InputRequest {
+  val method: Method = Roots.list
+}
+
 /** Nested input request for an unrecognized or extension method. */
 case class CustomInputRequest(
     method: Method,
@@ -50,6 +62,7 @@ case class CustomInputRequest(
 /** Client answer to a nested [[InputRequest]].
  *
  *  Keys in [[InputResponses]] match the server-assigned keys in [[InputRequests]].
+ *  Known shapes are [[ElicitResult]], [[CreateMessageResult]], and [[ListRootsResult]].
  */
 sealed trait InputResponse
 
@@ -64,6 +77,14 @@ case class ElicitationInputResponse(
  */
 case class SamplingInputResponse(
     result: CreateMessageResult
+) extends InputResponse
+
+/** Client answer to a [[RootsInputRequest]].
+ *
+ *  @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months.
+ */
+case class RootsInputResponse(
+    result: ListRootsResult
 ) extends InputResponse
 
 /** Client answer for an unrecognized or extension nested request. */
@@ -83,6 +104,12 @@ case class InputRequests(value: Map[String, InputRequest] = Map.empty)
  */
 case class InputResponses(value: Map[String, InputResponse] = Map.empty)
 
+object InputResponses {
+
+  /** Wire key when this map is embedded in request `params`. */
+  val InputResponsesKey: String = "inputResponses"
+}
+
 /** Server indicates additional input is needed before the request can complete.
  *
  *  At least one of [[inputRequests]] or [[requestState]] MUST be present.
@@ -98,6 +125,15 @@ case class InputRequiredResult(
     resultType: ResultType = InputRequiredResultType,
     meta: Option[ResultMeta] = None
 )
+
+object InputRequiredResult {
+
+  /** Wire key for nested input requests inside an input-required result. */
+  val InputRequestsKey: String = "inputRequests"
+
+  /** Wire key for opaque continuation state (request params or input-required result). */
+  val RequestStateKey: String = "requestState"
+}
 
 /** Outcome of a method that may pause for additional input.
  *

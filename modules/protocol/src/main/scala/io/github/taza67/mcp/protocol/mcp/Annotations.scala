@@ -14,6 +14,18 @@ case class Annotations(
     lastModified: Option[String] = None
 )
 
+object Annotations {
+
+  /** Wire key for intended audience roles. */
+  val AudienceKey: String = "audience"
+
+  /** Wire key for priority (`0`…`1`). */
+  val PriorityKey: String = "priority"
+
+  /** Wire key for last-modified ISO 8601 timestamp. */
+  val LastModifiedKey: String = "lastModified"
+}
+
 /** Opaque token representing a pagination position. */
 case class Cursor(value: String)
 

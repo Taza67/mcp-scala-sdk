@@ -1,7 +1,9 @@
 package io.github.taza67.mcp.protocol.mcp.resources
 
-import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
+import io.github.taza67.mcp.protocol.mcp._
+
+
 
 /** Method names for the resources domain. */
 object Resources {
@@ -103,6 +105,12 @@ case class ReadResourceRequestParams(
     inputResponses: Option[InputResponses] = None,
     requestState: Option[String] = None
 )
+
+object ReadResourceRequestParams {
+
+  /** Wire key for the resource URI inside JSON-RPC `params`. */
+  val UriKey: String = "uri"
+}
 
 /** Sent from the client to read a specific resource URI. */
 case class ReadResourceRequest(

@@ -1,7 +1,9 @@
 package io.github.taza67.mcp.protocol.mcp.roots
 
-import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
+import io.github.taza67.mcp.protocol.mcp._
+
+
 
 /** Method name for listing roots: `"roots/list"`.
  *
@@ -27,6 +29,18 @@ case class Root(
     meta: Option[MetaObject] = None
 )
 
+object Root {
+
+  /** Wire key for the root URI. */
+  val UriKey: String = "uri"
+
+  /** Wire key for the optional display name. */
+  val NameKey: String = "name"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
+
 /** Optional parameters for a `roots/list` request.
  *
  *  @param meta Optional open metadata on the request.
@@ -34,6 +48,12 @@ case class Root(
 case class ListRootsRequestParams(
     meta: Option[MetaObject] = None
 )
+
+object ListRootsRequestParams {
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
 
 /** Server→client request for root URIs the client allows the server to use.
  *
@@ -56,3 +76,9 @@ case class ListRootsRequest(
 case class ListRootsResult(
     roots: List[Root]
 )
+
+object ListRootsResult {
+
+  /** Wire key for the roots array. */
+  val RootsKey: String = "roots"
+}

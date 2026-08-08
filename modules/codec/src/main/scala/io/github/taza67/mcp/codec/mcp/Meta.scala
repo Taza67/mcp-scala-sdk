@@ -25,8 +25,11 @@ import io.github.taza67.mcp.protocol.mcp.StringProgressToken
 /** Protocol AST bridge for MCP `_meta` values (`JsonObject` / `JsonValue` ↔ ADT).
  *
  *  Package façades: [[Messages]] for envelopes, [[Meta]] for `_meta` values,
- *  and package [[lists]] for paginated list requests.
- *  Helpers: package-private [[Capabilities]] and [[Params]].
+ *  [[Content]] for content blocks, package [[lists]] for paginated lists, and
+ *  packages [[tools]] / [[resources]] / [[prompts]] / [[elicitation]] / [[roots]] /
+ *  [[sampling]] for domain bridges.
+ *  Helpers: package-private [[Capabilities]], [[Params]], [[Input]], and
+ *  [[PlainRequests]].
  */
 object Meta {
 

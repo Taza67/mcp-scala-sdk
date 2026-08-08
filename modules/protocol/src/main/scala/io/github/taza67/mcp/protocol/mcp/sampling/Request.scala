@@ -2,7 +2,7 @@ package io.github.taza67.mcp.protocol.mcp.sampling
 
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
-import io.github.taza67.mcp.protocol.mcp.{MetaObject, Role}
+import io.github.taza67.mcp.protocol.mcp.{MetaObject, RequestParams, Role}
 import io.github.taza67.mcp.protocol.mcp.tools.Tool
 
 
@@ -76,3 +76,21 @@ case class CreateMessageResult(
     stopReason: Option[String] = None,
     meta: Option[MetaObject] = None
 )
+
+object CreateMessageResult {
+
+  /** Wire key for the model name. */
+  val ModelKey: String = "model"
+
+  /** Wire key for the message role. */
+  val RoleKey: String = "role"
+
+  /** Wire key for sampling content (object or array). */
+  val ContentKey: String = "content"
+
+  /** Wire key for why sampling stopped. */
+  val StopReasonKey: String = "stopReason"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}

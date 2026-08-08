@@ -82,10 +82,7 @@ class PaginatedListsSuite extends FunSuite with CodecAssertions {
     val raw = PaginatedLists.fromListToolsRequest(
       ListToolsRequest(id = StringRequestId("1"), params = page2)
     )
-    val params = raw.value("params") match {
-      case o: JsonObject => o
-      case other         => fail(s"expected params object, got $other")
-    }
+    val params = paramsObject(raw)
     assertEquals(params.value.get(PaginatedRequestParams.CursorKey), Some(JsonString("page-2")))
     assertEquals(params.value.get("filter"), Some(JsonString("x")))
   }

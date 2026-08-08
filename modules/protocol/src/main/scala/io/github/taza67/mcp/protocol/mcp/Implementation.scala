@@ -18,3 +18,12 @@ case class Implementation(
     websiteUrl: Option[String] = None,
     icons: Option[List[Icon]] = None
 )
+
+object Implementation {
+  val NameKey: String = "name"
+  val VersionKey: String = "version"
+  val TitleKey: String = "title"
+  val DescriptionKey: String = "description"
+  val WebsiteUrlKey: String = "websiteUrl"
+  val IconsKey: String = "icons"
+}

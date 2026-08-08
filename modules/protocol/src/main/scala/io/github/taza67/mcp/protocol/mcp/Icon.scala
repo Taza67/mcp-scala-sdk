@@ -41,3 +41,10 @@ case class Icon(
     sizes: Option[List[String]] = None,
     theme: Option[IconTheme] = None
 )
+
+object Icon {
+  val SrcKey: String = "src"
+  val MimeTypeKey: String = "mimeType"
+  val SizesKey: String = "sizes"
+  val ThemeKey: String = "theme"
+}

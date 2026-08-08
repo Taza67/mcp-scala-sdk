@@ -3,8 +3,6 @@ package io.github.taza67.mcp.protocol.mcp.roots
 import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method name for listing roots: `"roots/list"`.
  *
  *  @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months.
@@ -47,10 +45,7 @@ case class ListRootsRequest(
     id: RequestId,
     params: Option[ListRootsRequestParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(method = Roots.list, id = id, params = None, jsonrpc = jsonrpc)
-}
+)
 
 /** Client response to a [[ListRootsRequest]].
  *

@@ -3,8 +3,6 @@ package io.github.taza67.mcp.protocol.mcp.resources
 import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method names for the resources domain. */
 object Resources {
   val list: Method = Method("resources/list")
@@ -65,15 +63,7 @@ case class ListResourcesRequest(
     id: RequestId,
     params: PaginatedRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Resources.list,
-      id = id,
-      params = Some(RequestParams(meta = params.meta, fields = params.fields)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result of a `resources/list` request.
  *
@@ -119,15 +109,7 @@ case class ReadResourceRequest(
     id: RequestId,
     params: ReadResourceRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Resources.read,
-      id = id,
-      params = Some(RequestParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Successful contents of a `resources/read` request.
  *
@@ -157,15 +139,7 @@ case class ListResourceTemplatesRequest(
     id: RequestId,
     params: PaginatedRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Resources.templatesList,
-      id = id,
-      params = Some(RequestParams(meta = params.meta, fields = params.fields)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result of a `resources/templates/list` request.
  *
@@ -200,10 +174,7 @@ case class ListResourceTemplatesResultResponse(
 case class ResourceListChangedNotification(
     params: Option[NotificationParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(method = Resources.listChangedNotification, params = params, jsonrpc = jsonrpc)
-}
+)
 
 /** Parameters for a `notifications/resources/updated` notification.
  *
@@ -223,11 +194,4 @@ case class ResourceUpdatedNotificationParams(
 case class ResourceUpdatedNotification(
     params: ResourceUpdatedNotificationParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(
-      method = Resources.updatedNotification,
-      params = Some(NotificationParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)

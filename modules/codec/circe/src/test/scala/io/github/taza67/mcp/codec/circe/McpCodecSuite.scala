@@ -8,14 +8,17 @@ import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
 import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
 import io.github.taza67.mcp.protocol.mcp.CompleteResultType
+import io.github.taza67.mcp.protocol.mcp.Cursor
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
 import io.github.taza67.mcp.protocol.mcp.McpMessage
 import io.github.taza67.mcp.protocol.mcp.McpNotification
 import io.github.taza67.mcp.protocol.mcp.McpRequest
 import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
 import io.github.taza67.mcp.protocol.mcp.NotificationParams
+import io.github.taza67.mcp.protocol.mcp.PaginatedRequestParams
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.Result
+import io.github.taza67.mcp.protocol.mcp.tools.Tools
 import munit.FunSuite
 
 
@@ -28,21 +31,46 @@ class McpCodecSuite extends FunSuite with CodecAssertions {
 
   test("McpRequest decode rejects params without _meta") {
     val raw =
-      """{"jsonrpc":"2.0","method":"tools/list","id":"1","params":{"cursor":"abc"}}"""
+      s"""{"jsonrpc":"2.0","method":"${Tools.list.value}","id":"1","params":{"cursor":"abc"}}"""
     assert(McpCodec.MessageDecoder.decode(raw).isLeft)
   }
 
-  test("McpRequest round-trips with _meta inside params") {
+  test("McpRequest round-trips plain RequestParams") {
     assertRoundTrip[McpMessage, String](
       McpRequest(
-        method = Method("tools/list"),
+        method = Tools.call,
         id = StringRequestId("1"),
         params = Some(
           RequestParams(
             meta = TestSupport.requestMeta,
-            fields = JsonObject(Map("cursor" -> JsonString("abc")))
+            fields = JsonObject(Map("name" -> JsonString("echo")))
           )
         )
+      )
+    )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+
+  test("McpRequest round-trips paginated params with cursor") {
+    assertRoundTrip[McpMessage, String](
+      McpRequest(
+        method = Tools.list,
+        id = StringRequestId("1"),
+        params = Some(
+          PaginatedRequestParams(
+            meta = TestSupport.requestMeta,
+            cursor = Some(Cursor("abc"))
+          )
+        )
+      )
+    )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+
+  test("McpRequest round-trips paginated params without cursor") {
+    assertRoundTrip[McpMessage, String](
+      McpRequest(
+        method = Tools.list,
+        id = StringRequestId("1"),
+        params = Some(PaginatedRequestParams(meta = TestSupport.requestMeta))
       )
     )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
   }

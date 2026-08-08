@@ -24,10 +24,59 @@ import io.github.taza67.mcp.protocol.mcp.StringProgressToken
 
 /** Protocol AST bridge for MCP `_meta` values (`JsonObject` / `JsonValue` ↔ ADT).
  *
- *  Package façades: [[Messages]] for envelopes, [[Meta]] for `_meta` values.
+ *  Package façades: [[Messages]] for envelopes, [[Meta]] for `_meta` values,
+ *  and package [[lists]] for paginated list requests.
  *  Helpers: package-private [[Capabilities]] and [[Params]].
  */
 object Meta {
+
+  def fromNotificationMeta(notificationMeta: NotificationMeta): JsonObject =
+    JsonObject(
+      Fields.withOptional(
+        notificationMeta.extensions.value -- NotificationMeta.ReservedKeys,
+        NotificationMeta.SubscriptionIdKey ->
+          notificationMeta.subscriptionId.map(Primitives.fromRequestId)
+      )
+    )
+
+  def fromIconTheme(iconTheme: IconTheme): JsonString =
+    JsonString(iconTheme.value)
+
+  def fromIcon(icon: Icon): JsonObject = {
+    val base = Map(Icon.SrcKey -> JsonString(icon.src))
+    JsonObject(
+      Fields.withOptional(
+        base,
+        Icon.MimeTypeKey -> icon.mimeType.map(JsonString(_)),
+        Icon.SizesKey -> icon.sizes.map(Primitives.fromList(_)(JsonString(_))),
+        Icon.ThemeKey -> icon.theme.map(fromIconTheme)
+      )
+    )
+  }
+
+  def fromImplementation(implementation: Implementation): JsonObject = {
+    val base = Map(
+      Implementation.NameKey -> JsonString(implementation.name),
+      Implementation.VersionKey -> JsonString(implementation.version)
+    )
+    JsonObject(
+      Fields.withOptional(
+        base,
+        Implementation.TitleKey -> implementation.title.map(JsonString(_)),
+        Implementation.DescriptionKey -> implementation.description.map(JsonString(_)),
+        Implementation.WebsiteUrlKey -> implementation.websiteUrl.map(JsonString(_)),
+        Implementation.IconsKey -> implementation.icons.map(Primitives.fromList(_)(fromIcon))
+      )
+    )
+  }
+
+  def fromResultMeta(resultMeta: ResultMeta): JsonObject =
+    JsonObject(
+      Fields.withOptional(
+        resultMeta.extensions.value -- ResultMeta.ReservedKeys,
+        ResultMeta.ServerInfoKey -> resultMeta.serverInfo.map(fromImplementation)
+      )
+    )
 
   def fromMcpProtocolVersion(version: McpProtocolVersion): JsonString =
     JsonString(version.value)
@@ -40,54 +89,6 @@ object Meta {
       case StringProgressToken(value) => JsonString(value)
       case NumberProgressToken(value) => JsonNumber(value)
     }
-
-  def fromIconTheme(iconTheme: IconTheme): JsonString =
-    JsonString(iconTheme.value)
-
-  def fromIcon(icon: Icon): JsonObject = {
-    val base = Map("src" -> JsonString(icon.src))
-    JsonObject(
-      Fields.withOptional(
-        base,
-        "mimeType" -> icon.mimeType.map(JsonString(_)),
-        "sizes" -> icon.sizes.map(Primitives.fromList(_)(JsonString(_))),
-        "theme" -> icon.theme.map(fromIconTheme)
-      )
-    )
-  }
-
-  def fromImplementation(implementation: Implementation): JsonObject = {
-    val base = Map(
-      "name" -> JsonString(implementation.name),
-      "version" -> JsonString(implementation.version)
-    )
-    JsonObject(
-      Fields.withOptional(
-        base,
-        "title" -> implementation.title.map(JsonString(_)),
-        "description" -> implementation.description.map(JsonString(_)),
-        "websiteUrl" -> implementation.websiteUrl.map(JsonString(_)),
-        "icons" -> implementation.icons.map(Primitives.fromList(_)(fromIcon))
-      )
-    )
-  }
-
-  def fromNotificationMeta(notificationMeta: NotificationMeta): JsonObject =
-    JsonObject(
-      Fields.withOptional(
-        notificationMeta.extensions.value -- NotificationMeta.ReservedKeys,
-        NotificationMeta.SubscriptionIdKey ->
-          notificationMeta.subscriptionId.map(Primitives.fromRequestId)
-      )
-    )
-
-  def fromResultMeta(resultMeta: ResultMeta): JsonObject =
-    JsonObject(
-      Fields.withOptional(
-        resultMeta.extensions.value -- ResultMeta.ReservedKeys,
-        ResultMeta.ServerInfoKey -> resultMeta.serverInfo.map(fromImplementation)
-      )
-    )
 
   def fromRequestMeta(requestMeta: RequestMeta): JsonObject = {
     val base =
@@ -107,59 +108,8 @@ object Meta {
     )
   }
 
-  def toMcpProtocolVersion(value: JsonValue): Either[DecodingError, McpProtocolVersion] =
-    Primitives.asString(value, RequestMeta.ProtocolVersionKey).flatMap { s =>
-      McpProtocolVersion
-        .fromValue(s)
-        .toRight(DecodingError(s"Unsupported protocol version: $s"))
-    }
-
-  def toLoggingLevel(value: JsonValue): Either[DecodingError, LoggingLevel] =
-    Primitives.asString(value, RequestMeta.LogLevelKey).flatMap { s =>
-      LoggingLevel
-        .fromValue(s)
-        .toRight(DecodingError(s"Invalid log level: $s"))
-    }
-
-  def toProgressToken(value: JsonValue): Either[DecodingError, ProgressToken] =
-    Primitives.asStringOrLong(value, "progress token")(
-      StringProgressToken(_),
-      NumberProgressToken(_)
-    )
-
-  def toIconTheme(value: JsonValue): Either[DecodingError, IconTheme] =
-    Primitives.asString(value, "theme").flatMap { s =>
-      IconTheme
-        .fromValue(s)
-        .toRight(DecodingError(s"Invalid icon theme: $s"))
-    }
-
-  def toIcon(value: JsonObject): Either[DecodingError, Icon] = {
-    val fields = value.value
-    for {
-      src <- Fields.requiredString(fields, "src")
-      mimeType <- Fields.optionalString(fields, "mimeType")
-      sizes <- Fields.optionalList(fields, "sizes")(Primitives.asString(_, "size"))
-      theme <- Fields.optional(fields, "theme")(toIconTheme)
-    } yield Icon(src, mimeType, sizes, theme)
-  }
-
-  def toImplementation(value: JsonObject): Either[DecodingError, Implementation] = {
-    val fields = value.value
-    for {
-      name <- Fields.requiredString(fields, "name")
-      version <- Fields.requiredString(fields, "version")
-      title <- Fields.optionalString(fields, "title")
-      description <- Fields.optionalString(fields, "description")
-      websiteUrl <- Fields.optionalString(fields, "websiteUrl")
-      icons <- Fields.optionalList(fields, "icons") { v =>
-        Fields.asObject(v, "icon").flatMap(toIcon)
-      }
-    } yield Implementation(name, version, title, description, websiteUrl, icons)
-  }
-
-  def toNotificationMeta(value: JsonObject): Either[DecodingError, NotificationMeta] = {
-    val fields = value.value
+  def toNotificationMeta(notificationMeta: JsonObject): Either[DecodingError, NotificationMeta] = {
+    val fields = notificationMeta.value
     val extensions = MetaObject(fields -- NotificationMeta.ReservedKeys)
     for {
       subscriptionId <- Fields.optional(fields, NotificationMeta.SubscriptionIdKey)(
@@ -168,8 +118,39 @@ object Meta {
     } yield NotificationMeta(subscriptionId, extensions)
   }
 
-  def toResultMeta(value: JsonObject): Either[DecodingError, ResultMeta] = {
-    val fields = value.value
+  def toIconTheme(iconTheme: JsonValue): Either[DecodingError, IconTheme] =
+    Primitives.asString(iconTheme, Icon.ThemeKey).flatMap { s =>
+      IconTheme
+        .fromValue(s)
+        .toRight(DecodingError(s"Invalid icon theme: $s"))
+    }
+
+  def toIcon(icon: JsonObject): Either[DecodingError, Icon] = {
+    val fields = icon.value
+    for {
+      src <- Fields.requiredString(fields, Icon.SrcKey)
+      mimeType <- Fields.optionalString(fields, Icon.MimeTypeKey)
+      sizes <- Fields.optionalList(fields, Icon.SizesKey)(Primitives.asString(_, "size"))
+      theme <- Fields.optional(fields, Icon.ThemeKey)(toIconTheme)
+    } yield Icon(src, mimeType, sizes, theme)
+  }
+
+  def toImplementation(implementation: JsonObject): Either[DecodingError, Implementation] = {
+    val fields = implementation.value
+    for {
+      name <- Fields.requiredString(fields, Implementation.NameKey)
+      version <- Fields.requiredString(fields, Implementation.VersionKey)
+      title <- Fields.optionalString(fields, Implementation.TitleKey)
+      description <- Fields.optionalString(fields, Implementation.DescriptionKey)
+      websiteUrl <- Fields.optionalString(fields, Implementation.WebsiteUrlKey)
+      icons <- Fields.optionalList(fields, Implementation.IconsKey) { v =>
+        Fields.asObject(v, "icon").flatMap(toIcon)
+      }
+    } yield Implementation(name, version, title, description, websiteUrl, icons)
+  }
+
+  def toResultMeta(resultMeta: JsonObject): Either[DecodingError, ResultMeta] = {
+    val fields = resultMeta.value
     val extensions = MetaObject(fields -- ResultMeta.ReservedKeys)
     for {
       serverInfo <- Fields.optional(fields, ResultMeta.ServerInfoKey)(v =>
@@ -178,8 +159,28 @@ object Meta {
     } yield ResultMeta(serverInfo, extensions)
   }
 
-  def toRequestMeta(value: JsonObject): Either[DecodingError, RequestMeta] = {
-    val fields = value.value
+  def toMcpProtocolVersion(version: JsonValue): Either[DecodingError, McpProtocolVersion] =
+    Primitives.asString(version, RequestMeta.ProtocolVersionKey).flatMap { s =>
+      McpProtocolVersion
+        .fromValue(s)
+        .toRight(DecodingError(s"Unsupported protocol version: $s"))
+    }
+
+  def toLoggingLevel(level: JsonValue): Either[DecodingError, LoggingLevel] =
+    Primitives.asString(level, RequestMeta.LogLevelKey).flatMap { s =>
+      LoggingLevel
+        .fromValue(s)
+        .toRight(DecodingError(s"Invalid log level: $s"))
+    }
+
+  def toProgressToken(token: JsonValue): Either[DecodingError, ProgressToken] =
+    Primitives.asStringOrLong(token, "progress token")(
+      StringProgressToken(_),
+      NumberProgressToken(_)
+    )
+
+  def toRequestMeta(requestMeta: JsonObject): Either[DecodingError, RequestMeta] = {
+    val fields = requestMeta.value
     val extensions = MetaObject(fields -- RequestMeta.ReservedKeys)
     for {
       protocolVersion <- Fields

@@ -4,8 +4,6 @@ import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.json.{JsonObject, JsonValue}
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method names for the tools domain. */
 object Tools {
   val list: Method = Method("tools/list")
@@ -106,15 +104,7 @@ case class CallToolRequest(
     id: RequestId,
     params: CallToolRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Tools.call,
-      id = id,
-      params = Some(RequestParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Successful unstructured/structured outcome of a tool call.
  *
@@ -148,15 +138,7 @@ case class ListToolsRequest(
     id: RequestId,
     params: PaginatedRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Tools.list,
-      id = id,
-      params = Some(RequestParams(meta = params.meta, fields = params.fields)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result of a `tools/list` request.
  *
@@ -191,7 +173,4 @@ case class ListToolsResultResponse(
 case class ToolListChangedNotification(
     params: Option[NotificationParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(method = Tools.listChangedNotification, params = params, jsonrpc = jsonrpc)
-}
+)

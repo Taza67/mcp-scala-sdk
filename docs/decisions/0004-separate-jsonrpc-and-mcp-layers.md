@@ -36,7 +36,7 @@ This decision is reflected in commit `6854927` (`refactor: separate JSON-RPC and
 * Good, because MCP exposes `McpRequest` / `McpNotification` / `McpResponse` (and related params/result/meta) as ADTs without pretending to own wire assembly.
 * Good, because the shared JSON AST lives under `protocol.json` and serves both layers (ADR-0003).
 * Bad, because callers must import the right package and map between MCP and JSON-RPC when encoding.
-* Note: an early `toJsonRpc` on MCP messages was removed once codecs landed — it dropped `_meta` / `resultType` and competed with the honest path in `modules/codec` (ADR-0006).
+* Note: an early `toJsonRpc` on MCP messages was removed once codecs landed — it dropped `_meta` / `resultType` and competed with the honest path in `modules/codec` (ADR-0006). Partial domain `toMcp*` helpers were removed for the same reason once `McpRequest.params` became a sealed sum that can carry pagination (ADR-0007).
 
 ### Confirmation
 

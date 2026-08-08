@@ -2,7 +2,7 @@ package io.github.taza67.mcp.protocol.mcp.sampling
 
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
-import io.github.taza67.mcp.protocol.mcp.{McpRequest, MetaObject, Role}
+import io.github.taza67.mcp.protocol.mcp.{MetaObject, Role}
 import io.github.taza67.mcp.protocol.mcp.tools.Tool
 
 
@@ -54,9 +54,6 @@ case class CreateMessageRequest(
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) {
   def method: Method = Sampling.createMessage
-
-  def toMcpRequest: McpRequest =
-    McpRequest(method = Sampling.createMessage, id = id, params = None, jsonrpc = jsonrpc)
 }
 
 /** Client response to a [[CreateMessageRequest]].

@@ -1,7 +1,8 @@
 package io.github.taza67.mcp.protocol.mcp.elicitation
 
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
-import io.github.taza67.mcp.protocol.mcp.McpRequest
+
+
 
 /** Method name for user elicitation: `"elicitation/create"`. */
 object Elicitation {
@@ -48,7 +49,4 @@ case class ElicitRequest(
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) {
   def method: Method = Elicitation.create
-
-  def toMcpRequest: McpRequest =
-    McpRequest(method = Elicitation.create, id = id, params = None, jsonrpc = jsonrpc)
 }

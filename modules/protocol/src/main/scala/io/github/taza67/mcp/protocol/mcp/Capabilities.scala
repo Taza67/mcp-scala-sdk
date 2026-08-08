@@ -15,6 +15,11 @@ case class SamplingCapability(
     tools: Option[JsonObject] = None
 )
 
+object SamplingCapability {
+  val ContextKey: String = "context"
+  val ToolsKey: String = "tools"
+}
+
 /** Client support for elicitation from the server.
  *
  *  @param form Form-mode elicitation support.
@@ -24,6 +29,11 @@ case class ElicitationCapability(
     form: Option[JsonObject] = None,
     url: Option[JsonObject] = None
 )
+
+object ElicitationCapability {
+  val FormKey: String = "form"
+  val UrlKey: String = "url"
+}
 
 /** Capabilities a client may declare for a given request.
  *
@@ -44,10 +54,15 @@ case class ClientCapabilities(
 )
 
 object ClientCapabilities {
+  val ExperimentalKey: String = "experimental"
+  val RootsKey: String = "roots"
+  val SamplingKey: String = "sampling"
+  val ElicitationKey: String = "elicitation"
+  val ExtensionsKey: String = "extensions"
 
   /** Top-level wire keys with dedicated fields (including nested `extensions`). */
   val KnownKeys: Set[String] =
-    Set("experimental", "roots", "sampling", "elicitation", "extensions")
+    Set(ExperimentalKey, RootsKey, SamplingKey, ElicitationKey, ExtensionsKey)
 }
 
 /** Present if the server offers prompt templates.
@@ -57,6 +72,10 @@ object ClientCapabilities {
 case class PromptsCapability(
     listChanged: Option[Boolean] = None
 )
+
+object PromptsCapability {
+  val ListChangedKey: String = "listChanged"
+}
 
 /** Present if the server offers resources to read.
  *
@@ -68,6 +87,11 @@ case class ResourcesCapability(
     listChanged: Option[Boolean] = None
 )
 
+object ResourcesCapability {
+  val SubscribeKey: String = "subscribe"
+  val ListChangedKey: String = "listChanged"
+}
+
 /** Present if the server offers tools to call.
  *
  *  @param listChanged Whether the server sends tool-list change notifications.
@@ -75,6 +99,10 @@ case class ResourcesCapability(
 case class ToolsCapability(
     listChanged: Option[Boolean] = None
 )
+
+object ToolsCapability {
+  val ListChangedKey: String = "listChanged"
+}
 
 /** Capabilities a server may advertise (e.g. via `server/discover`).
  *
@@ -99,16 +127,23 @@ case class ServerCapabilities(
 )
 
 object ServerCapabilities {
+  val ExperimentalKey: String = "experimental"
+  val LoggingKey: String = "logging"
+  val CompletionsKey: String = "completions"
+  val PromptsKey: String = "prompts"
+  val ResourcesKey: String = "resources"
+  val ToolsKey: String = "tools"
+  val ExtensionsKey: String = "extensions"
 
   /** Top-level wire keys with dedicated fields (including nested `extensions`). */
   val KnownKeys: Set[String] =
     Set(
-      "experimental",
-      "logging",
-      "completions",
-      "prompts",
-      "resources",
-      "tools",
-      "extensions"
+      ExperimentalKey,
+      LoggingKey,
+      CompletionsKey,
+      PromptsKey,
+      ResourcesKey,
+      ToolsKey,
+      ExtensionsKey
     )
 }

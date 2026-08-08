@@ -4,8 +4,6 @@ import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method names for core lifecycle / logging notifications. */
 object Notifications {
   val progress: Method = Method("notifications/progress")
@@ -33,14 +31,7 @@ case class ProgressNotificationParams(
 case class ProgressNotification(
     params: ProgressNotificationParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(
-      method = Notifications.progress,
-      params = Some(NotificationParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Parameters for a `notifications/cancelled` notification.
  *
@@ -64,14 +55,7 @@ case class CancelledNotificationParams(
 case class CancelledNotification(
     params: CancelledNotificationParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(
-      method = Notifications.cancelled,
-      params = Some(NotificationParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Parameters for a `notifications/message` log notification.
  *
@@ -96,11 +80,4 @@ case class LoggingMessageNotificationParams(
 case class LoggingMessageNotification(
     params: LoggingMessageNotificationParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(
-      method = Notifications.message,
-      params = Some(NotificationParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)

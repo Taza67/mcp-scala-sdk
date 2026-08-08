@@ -9,10 +9,25 @@ import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 
 
 
-/** Common parameters for any MCP request.
+/** MCP request `params` carried by [[McpRequest]] (Scala 2.13 sealed sum).
+ *
+ *  [[RequestParams]] for ordinary methods; [[PaginatedRequestParams]] for list-style
+ *  methods (`tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`)
+ *  with an optional wire `cursor`. Envelope decode selects the subtype from the
+ *  JSON-RPC method (ADR-0007), not from whether `cursor` is present.
+ */
+sealed trait McpRequestParams {
+  def meta: RequestMeta
+  def fields: JsonObject
+}
+
+/** Common parameters for any non-paginated MCP request.
  *
  *  `_meta` is required. Method-specific fields live in [[fields]] until typed
  *  request-param ADTs are used for a given method.
+ *
+ *  [[fields]] MUST NOT contain [[PaginatedRequestParams.CursorKey]] — that key is
+ *  reserved for [[PaginatedRequestParams]].
  *
  *  @param meta Required request metadata (protocol version, client capabilities, …).
  *  @param fields Open bag of method-specific parameter fields.
@@ -20,7 +35,7 @@ import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 case class RequestParams(
     meta: RequestMeta,
     fields: JsonObject = JsonObject(Map.empty)
-)
+) extends McpRequestParams
 
 object RequestParams {
 
@@ -30,15 +45,24 @@ object RequestParams {
 
 /** Common parameters for paginated list-style requests.
  *
+ *  Used when the JSON-RPC method is a list method (see [[McpRequestParams]]).
+ *  Absent `cursor` means the first page — still this type, not [[RequestParams]].
+ *
  *  @param meta Required request metadata.
  *  @param cursor Opaque pagination position; when set, the server returns results after it.
- *  @param fields Open bag of additional method-specific fields.
+ *  @param fields Open bag of additional method-specific fields (not including `cursor`).
  */
 case class PaginatedRequestParams(
     meta: RequestMeta,
     cursor: Option[Cursor] = None,
     fields: JsonObject = JsonObject(Map.empty)
-)
+) extends McpRequestParams
+
+object PaginatedRequestParams {
+
+  /** Wire key for the opaque pagination cursor inside JSON-RPC `params`. */
+  val CursorKey: String = "cursor"
+}
 
 /** Common parameters for any MCP notification.
  *
@@ -97,12 +121,13 @@ sealed trait McpMessage {
  *
  *  @param method Method name to invoke.
  *  @param id Correlates this request with its response.
- *  @param params MCP request parameters (`_meta` required when present).
+ *  @param params MCP request parameters (`_meta` required when present; may be
+ *                plain or paginated).
  */
 case class McpRequest(
     method: Method,
     id: RequestId,
-    params: Option[RequestParams] = None,
+    params: Option[McpRequestParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends McpMessage
 

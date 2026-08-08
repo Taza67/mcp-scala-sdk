@@ -3,8 +3,6 @@ package io.github.taza67.mcp.protocol.mcp.completion
 import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method name for argument autocompletion. */
 object Completion {
   val complete: Method = Method("completion/complete")
@@ -70,15 +68,7 @@ case class CompleteRequest(
     id: RequestId,
     params: CompleteRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Completion.complete,
-      id = id,
-      params = Some(RequestParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Completion suggestions returned by the server.
  *

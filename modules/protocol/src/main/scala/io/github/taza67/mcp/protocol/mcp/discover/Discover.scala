@@ -3,8 +3,6 @@ package io.github.taza67.mcp.protocol.mcp.discover
 import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method name for server capability discovery: `"server/discover"`. */
 object ServerDiscover {
   val method: Method = Method("server/discover")
@@ -22,15 +20,7 @@ case class DiscoverRequest(
     id: RequestId,
     params: RequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = ServerDiscover.method,
-      id = id,
-      params = Some(params),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result of a `server/discover` request.
  *
@@ -64,14 +54,4 @@ case class DiscoverResultResponse(
     result: DiscoverResult,
     id: RequestId,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpResponse: McpSuccessResponse =
-    McpSuccessResponse(
-      result = Result(
-        resultType = result.resultType,
-        meta = result.meta
-      ),
-      id = id,
-      jsonrpc = jsonrpc
-    )
-}
+)

@@ -21,8 +21,8 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "context" -> sampling.context,
-        "tools" -> sampling.tools
+        SamplingCapability.ContextKey -> sampling.context,
+        SamplingCapability.ToolsKey -> sampling.tools
       )
     )
 
@@ -30,8 +30,8 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "form" -> elicitation.form,
-        "url" -> elicitation.url
+        ElicitationCapability.FormKey -> elicitation.form,
+        ElicitationCapability.UrlKey -> elicitation.url
       )
     )
 
@@ -39,7 +39,7 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "listChanged" -> prompts.listChanged.map(Primitives.fromBool)
+        PromptsCapability.ListChangedKey -> prompts.listChanged.map(Primitives.fromBool)
       )
     )
 
@@ -47,8 +47,8 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "subscribe" -> resources.subscribe.map(Primitives.fromBool),
-        "listChanged" -> resources.listChanged.map(Primitives.fromBool)
+        ResourcesCapability.SubscribeKey -> resources.subscribe.map(Primitives.fromBool),
+        ResourcesCapability.ListChangedKey -> resources.listChanged.map(Primitives.fromBool)
       )
     )
 
@@ -56,7 +56,7 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "listChanged" -> tools.listChanged.map(Primitives.fromBool)
+        ToolsCapability.ListChangedKey -> tools.listChanged.map(Primitives.fromBool)
       )
     )
 
@@ -68,11 +68,15 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "experimental" -> capabilities.experimental.filter(_.nonEmpty).map(Fields.fromObjectMap),
-        "roots" -> capabilities.roots,
-        "sampling" -> capabilities.sampling.map(fromSamplingCapability),
-        "elicitation" -> capabilities.elicitation.map(fromElicitationCapability),
-        "extensions" -> Option.when(extensionEntries.nonEmpty)(
+        ClientCapabilities.ExperimentalKey -> capabilities.experimental
+          .filter(_.nonEmpty)
+          .map(Fields.fromObjectMap),
+        ClientCapabilities.RootsKey -> capabilities.roots,
+        ClientCapabilities.SamplingKey -> capabilities.sampling.map(fromSamplingCapability),
+        ClientCapabilities.ElicitationKey -> capabilities.elicitation.map(
+          fromElicitationCapability
+        ),
+        ClientCapabilities.ExtensionsKey -> Option.when(extensionEntries.nonEmpty)(
           Fields.fromObjectMap(extensionEntries)
         )
       )
@@ -87,73 +91,81 @@ private[mcp] object Capabilities {
     JsonObject(
       Fields.withOptional(
         Map.empty,
-        "experimental" -> capabilities.experimental.filter(_.nonEmpty).map(Fields.fromObjectMap),
-        "logging" -> capabilities.logging,
-        "completions" -> capabilities.completions,
-        "prompts" -> capabilities.prompts.map(fromPromptsCapability),
-        "resources" -> capabilities.resources.map(fromResourcesCapability),
-        "tools" -> capabilities.tools.map(fromToolsCapability),
-        "extensions" -> Option.when(extensionEntries.nonEmpty)(
+        ServerCapabilities.ExperimentalKey -> capabilities.experimental
+          .filter(_.nonEmpty)
+          .map(Fields.fromObjectMap),
+        ServerCapabilities.LoggingKey -> capabilities.logging,
+        ServerCapabilities.CompletionsKey -> capabilities.completions,
+        ServerCapabilities.PromptsKey -> capabilities.prompts.map(fromPromptsCapability),
+        ServerCapabilities.ResourcesKey -> capabilities.resources.map(fromResourcesCapability),
+        ServerCapabilities.ToolsKey -> capabilities.tools.map(fromToolsCapability),
+        ServerCapabilities.ExtensionsKey -> Option.when(extensionEntries.nonEmpty)(
           Fields.fromObjectMap(extensionEntries)
         )
       )
     )
   }
 
-  def toSamplingCapability(value: JsonObject): Either[DecodingError, SamplingCapability] = {
-    val fields = value.value
+  def toSamplingCapability(sampling: JsonObject): Either[DecodingError, SamplingCapability] = {
+    val fields = sampling.value
     for {
-      context <- Fields.optionalObject(fields, "context")
-      tools <- Fields.optionalObject(fields, "tools")
+      context <- Fields.optionalObject(fields, SamplingCapability.ContextKey)
+      tools <- Fields.optionalObject(fields, SamplingCapability.ToolsKey)
     } yield SamplingCapability(context, tools)
   }
 
-  def toElicitationCapability(value: JsonObject): Either[DecodingError, ElicitationCapability] = {
-    val fields = value.value
+  def toElicitationCapability(
+      elicitation: JsonObject
+  ): Either[DecodingError, ElicitationCapability] = {
+    val fields = elicitation.value
     for {
-      form <- Fields.optionalObject(fields, "form")
-      url <- Fields.optionalObject(fields, "url")
+      form <- Fields.optionalObject(fields, ElicitationCapability.FormKey)
+      url <- Fields.optionalObject(fields, ElicitationCapability.UrlKey)
     } yield ElicitationCapability(form, url)
   }
 
-  def toPromptsCapability(value: JsonObject): Either[DecodingError, PromptsCapability] = {
-    val fields = value.value
+  def toPromptsCapability(prompts: JsonObject): Either[DecodingError, PromptsCapability] = {
+    val fields = prompts.value
     for {
-      listChanged <- Fields.optionalBool(fields, "listChanged")
+      listChanged <- Fields.optionalBool(fields, PromptsCapability.ListChangedKey)
     } yield PromptsCapability(listChanged)
   }
 
-  def toResourcesCapability(value: JsonObject): Either[DecodingError, ResourcesCapability] = {
-    val fields = value.value
+  def toResourcesCapability(resources: JsonObject): Either[DecodingError, ResourcesCapability] = {
+    val fields = resources.value
     for {
-      subscribe <- Fields.optionalBool(fields, "subscribe")
-      listChanged <- Fields.optionalBool(fields, "listChanged")
+      subscribe <- Fields.optionalBool(fields, ResourcesCapability.SubscribeKey)
+      listChanged <- Fields.optionalBool(fields, ResourcesCapability.ListChangedKey)
     } yield ResourcesCapability(subscribe, listChanged)
   }
 
-  def toToolsCapability(value: JsonObject): Either[DecodingError, ToolsCapability] = {
-    val fields = value.value
+  def toToolsCapability(tools: JsonObject): Either[DecodingError, ToolsCapability] = {
+    val fields = tools.value
     for {
-      listChanged <- Fields.optionalBool(fields, "listChanged")
+      listChanged <- Fields.optionalBool(fields, ToolsCapability.ListChangedKey)
     } yield ToolsCapability(listChanged)
   }
 
-  def toClientCapabilities(value: JsonObject): Either[DecodingError, ClientCapabilities] = {
-    val fields = value.value
+  def toClientCapabilities(capabilities: JsonObject): Either[DecodingError, ClientCapabilities] = {
+    val fields = capabilities.value
     for {
-      experimental <- Fields.optional(fields, "experimental")(v =>
-        Fields.asObject(v, "experimental").flatMap(Fields.toObjectMap(_, "experimental"))
+      experimental <- Fields.optional(fields, ClientCapabilities.ExperimentalKey)(v =>
+        Fields
+          .asObject(v, ClientCapabilities.ExperimentalKey)
+          .flatMap(Fields.toObjectMap(_, ClientCapabilities.ExperimentalKey))
       )
-      roots <- Fields.optionalObject(fields, "roots")
-      sampling <- Fields.optional(fields, "sampling")(v =>
-        Fields.asObject(v, "sampling").flatMap(toSamplingCapability)
+      roots <- Fields.optionalObject(fields, ClientCapabilities.RootsKey)
+      sampling <- Fields.optional(fields, ClientCapabilities.SamplingKey)(v =>
+        Fields.asObject(v, ClientCapabilities.SamplingKey).flatMap(toSamplingCapability)
       )
-      elicitation <- Fields.optional(fields, "elicitation")(v =>
-        Fields.asObject(v, "elicitation").flatMap(toElicitationCapability)
+      elicitation <- Fields.optional(fields, ClientCapabilities.ElicitationKey)(v =>
+        Fields.asObject(v, ClientCapabilities.ElicitationKey).flatMap(toElicitationCapability)
       )
       extensions <- Fields
-        .optional(fields, "extensions")(v =>
-          Fields.asObject(v, "extensions").flatMap(Fields.toObjectMap(_, "extensions"))
+        .optional(fields, ClientCapabilities.ExtensionsKey)(v =>
+          Fields
+            .asObject(v, ClientCapabilities.ExtensionsKey)
+            .flatMap(Fields.toObjectMap(_, ClientCapabilities.ExtensionsKey))
         )
         .map(_.map(_.filterNot { case (key, _) => ClientCapabilities.KnownKeys.contains(key) }))
     } yield ClientCapabilities(
@@ -165,26 +177,30 @@ private[mcp] object Capabilities {
     )
   }
 
-  def toServerCapabilities(value: JsonObject): Either[DecodingError, ServerCapabilities] = {
-    val fields = value.value
+  def toServerCapabilities(capabilities: JsonObject): Either[DecodingError, ServerCapabilities] = {
+    val fields = capabilities.value
     for {
-      experimental <- Fields.optional(fields, "experimental")(v =>
-        Fields.asObject(v, "experimental").flatMap(Fields.toObjectMap(_, "experimental"))
+      experimental <- Fields.optional(fields, ServerCapabilities.ExperimentalKey)(v =>
+        Fields
+          .asObject(v, ServerCapabilities.ExperimentalKey)
+          .flatMap(Fields.toObjectMap(_, ServerCapabilities.ExperimentalKey))
       )
-      logging <- Fields.optionalObject(fields, "logging")
-      completions <- Fields.optionalObject(fields, "completions")
-      prompts <- Fields.optional(fields, "prompts")(v =>
-        Fields.asObject(v, "prompts").flatMap(toPromptsCapability)
+      logging <- Fields.optionalObject(fields, ServerCapabilities.LoggingKey)
+      completions <- Fields.optionalObject(fields, ServerCapabilities.CompletionsKey)
+      prompts <- Fields.optional(fields, ServerCapabilities.PromptsKey)(v =>
+        Fields.asObject(v, ServerCapabilities.PromptsKey).flatMap(toPromptsCapability)
       )
-      resources <- Fields.optional(fields, "resources")(v =>
-        Fields.asObject(v, "resources").flatMap(toResourcesCapability)
+      resources <- Fields.optional(fields, ServerCapabilities.ResourcesKey)(v =>
+        Fields.asObject(v, ServerCapabilities.ResourcesKey).flatMap(toResourcesCapability)
       )
-      tools <- Fields.optional(fields, "tools")(v =>
-        Fields.asObject(v, "tools").flatMap(toToolsCapability)
+      tools <- Fields.optional(fields, ServerCapabilities.ToolsKey)(v =>
+        Fields.asObject(v, ServerCapabilities.ToolsKey).flatMap(toToolsCapability)
       )
       extensions <- Fields
-        .optional(fields, "extensions")(v =>
-          Fields.asObject(v, "extensions").flatMap(Fields.toObjectMap(_, "extensions"))
+        .optional(fields, ServerCapabilities.ExtensionsKey)(v =>
+          Fields
+            .asObject(v, ServerCapabilities.ExtensionsKey)
+            .flatMap(Fields.toObjectMap(_, ServerCapabilities.ExtensionsKey))
         )
         .map(_.map(_.filterNot { case (key, _) => ServerCapabilities.KnownKeys.contains(key) }))
     } yield ServerCapabilities(

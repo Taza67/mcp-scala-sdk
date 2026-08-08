@@ -8,14 +8,17 @@ import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
 import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
 import io.github.taza67.mcp.protocol.mcp.CompleteResultType
+import io.github.taza67.mcp.protocol.mcp.Cursor
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
 import io.github.taza67.mcp.protocol.mcp.McpMessage
 import io.github.taza67.mcp.protocol.mcp.McpNotification
 import io.github.taza67.mcp.protocol.mcp.McpRequest
 import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
 import io.github.taza67.mcp.protocol.mcp.NotificationParams
+import io.github.taza67.mcp.protocol.mcp.PaginatedRequestParams
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.Result
+import io.github.taza67.mcp.protocol.mcp.tools.Tools
 import munit.FunSuite
 
 
@@ -26,7 +29,7 @@ class MessagesSuite extends FunSuite with CodecAssertions {
     val raw = JsonObject(
       Map(
         "jsonrpc" -> JsonString("2.0"),
-        "method" -> JsonString("tools/list"),
+        "method" -> JsonString(Tools.list.value),
         "id" -> JsonString("1"),
         "params" -> JsonObject(Map("cursor" -> JsonString("abc")))
       )
@@ -34,19 +37,65 @@ class MessagesSuite extends FunSuite with CodecAssertions {
     assert(Messages.toMessage(raw).isLeft)
   }
 
-  test("McpRequest round-trips with _meta inside params") {
+  test("McpRequest round-trips plain RequestParams") {
     assertRoundTrip[McpMessage, JsonObject](
       McpRequest(
-        method = Method("tools/list"),
+        method = Tools.call,
         id = StringRequestId("1"),
         params = Some(
           RequestParams(
             meta = TestSupport.requestMeta,
-            fields = JsonObject(Map("cursor" -> JsonString("abc")))
+            fields = JsonObject(Map("name" -> JsonString("echo")))
           )
         )
       )
     )(Messages.fromMessage, Messages.toMessage)
+  }
+
+  test("McpRequest round-trips paginated params with cursor") {
+    val message: McpMessage = McpRequest(
+      method = Tools.list,
+      id = StringRequestId("1"),
+      params = Some(
+        PaginatedRequestParams(
+          meta = TestSupport.requestMeta,
+          cursor = Some(Cursor("abc"))
+        )
+      )
+    )
+    assertRoundTrip[McpMessage, JsonObject](message)(Messages.fromMessage, Messages.toMessage)
+    val params = Messages.fromMessage(message).value("params") match {
+      case o: JsonObject => o
+      case other         => fail(s"expected params object, got $other")
+    }
+    assertEquals(params.value.get(PaginatedRequestParams.CursorKey), Some(JsonString("abc")))
+  }
+
+  test("McpRequest round-trips paginated params without cursor as PaginatedRequestParams") {
+    assertRoundTrip[McpMessage, JsonObject](
+      McpRequest(
+        method = Tools.list,
+        id = StringRequestId("1"),
+        params = Some(PaginatedRequestParams(meta = TestSupport.requestMeta))
+      )
+    )(Messages.fromMessage, Messages.toMessage)
+  }
+
+  test("McpRequest decode rejects cursor on non-paginated method") {
+    val raw = JsonObject(
+      Map(
+        "jsonrpc" -> JsonString("2.0"),
+        "method" -> JsonString(Tools.call.value),
+        "id" -> JsonString("1"),
+        "params" -> JsonObject(
+          Map(
+            RequestParams.MetaKey -> Meta.fromRequestMeta(TestSupport.requestMeta),
+            PaginatedRequestParams.CursorKey -> JsonString("abc")
+          )
+        )
+      )
+    )
+    assert(Messages.toMessage(raw).isLeft)
   }
 
   test("McpNotification round-trips without _meta") {

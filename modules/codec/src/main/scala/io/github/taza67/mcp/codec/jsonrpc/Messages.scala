@@ -89,9 +89,7 @@ object Messages {
     } yield Notification(method, params, jsonrpc)
   }
 
-  def toSuccessResponse(
-      successResponse: JsonObject
-  ): Either[DecodingError, SuccessResponse] = {
+  def toSuccessResponse(successResponse: JsonObject): Either[DecodingError, SuccessResponse] = {
     val fields = successResponse.value
     for {
       result <- Fields.required(fields, "result")
@@ -119,21 +117,21 @@ object Messages {
     } yield ErrorResponse(error, id, jsonrpc)
   }
 
-  def toMessage(value: JsonValue): Either[DecodingError, Message] =
-    Fields.asObject(value, "JSON-RPC message").flatMap(toMessageObject)
+  def toMessage(message: JsonValue): Either[DecodingError, Message] =
+    Fields.asObject(message, "JSON-RPC message").flatMap(toMessageObject)
 
-  private def toMessageObject(obj: JsonObject): Either[DecodingError, Message] = {
-    val fields = obj.value
+  private def toMessageObject(message: JsonObject): Either[DecodingError, Message] = {
+    val fields = message.value
     val hasMethod = fields.contains("method")
     val hasId = fields.contains("id")
     val hasResult = fields.contains("result")
     val hasError = fields.contains("error")
 
     (hasMethod, hasId, hasResult, hasError) match {
-      case (true, true, false, false)  => toRequest(obj)
-      case (true, false, false, false) => toNotification(obj)
-      case (false, _, true, false)     => toSuccessResponse(obj)
-      case (false, _, false, true)     => toErrorResponse(obj)
+      case (true, true, false, false)  => toRequest(message)
+      case (true, false, false, false) => toNotification(message)
+      case (false, _, true, false)     => toSuccessResponse(message)
+      case (false, _, false, true)     => toErrorResponse(message)
       case _ =>
         Left(DecodingError("Ambiguous or invalid JSON-RPC message shape"))
     }

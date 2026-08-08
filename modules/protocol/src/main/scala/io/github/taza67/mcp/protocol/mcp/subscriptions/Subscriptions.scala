@@ -3,8 +3,6 @@ package io.github.taza67.mcp.protocol.mcp.subscriptions
 import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method names for the subscriptions domain. */
 object Subscriptions {
   val listen: Method = Method("subscriptions/listen")
@@ -48,15 +46,7 @@ case class SubscriptionsListenRequest(
     id: RequestId,
     params: SubscriptionsListenRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Subscriptions.listen,
-      id = id,
-      params = Some(RequestParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result `_meta` for a graceful `subscriptions/listen` teardown.
  *
@@ -112,11 +102,4 @@ case class SubscriptionsAcknowledgedNotificationParams(
 case class SubscriptionsAcknowledgedNotification(
     params: SubscriptionsAcknowledgedNotificationParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(
-      method = Subscriptions.acknowledgedNotification,
-      params = Some(NotificationParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)

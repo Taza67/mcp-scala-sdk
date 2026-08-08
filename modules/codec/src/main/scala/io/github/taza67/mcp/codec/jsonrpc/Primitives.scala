@@ -23,16 +23,16 @@ private[jsonrpc] object Primitives {
   def fromRequestId(requestId: RequestId): JsonValue =
     SharedPrimitives.fromRequestId(requestId)
 
-  def toJsonRpcVersion(version: JsonValue): Either[DecodingError, JsonRpcVersion] =
-    version match {
-      case JsonString(value) if value == "2.0" => Right(JsonRpcVersion20)
-      case _                                   => Left(DecodingError("Invalid version"))
+  def toJsonRpcVersion(jsonRpcVersion: JsonValue): Either[DecodingError, JsonRpcVersion] =
+    jsonRpcVersion match {
+      case JsonString(s) if s == "2.0" => Right(JsonRpcVersion20)
+      case _                           => Left(DecodingError("Invalid version"))
     }
 
   def toMethod(method: JsonValue): Either[DecodingError, Method] =
     method match {
-      case JsonString(value) if !value.isBlank() => Right(Method(value))
-      case _                                     => Left(DecodingError("Invalid method"))
+      case JsonString(s) if !s.isBlank() => Right(Method(s))
+      case _                             => Left(DecodingError("Invalid method"))
     }
 
   def toRequestId(requestId: JsonValue): Either[DecodingError, RequestId] =

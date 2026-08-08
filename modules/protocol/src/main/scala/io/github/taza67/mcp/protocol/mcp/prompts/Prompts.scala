@@ -3,8 +3,6 @@ package io.github.taza67.mcp.protocol.mcp.prompts
 import io.github.taza67.mcp.protocol.mcp._
 import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, Method, RequestId}
 
-
-
 /** Method names for the prompts domain. */
 object Prompts {
   val list: Method = Method("prompts/list")
@@ -62,15 +60,7 @@ case class ListPromptsRequest(
     id: RequestId,
     params: PaginatedRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Prompts.list,
-      id = id,
-      params = Some(RequestParams(meta = params.meta, fields = params.fields)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result of a `prompts/list` request.
  *
@@ -118,15 +108,7 @@ case class GetPromptRequest(
     id: RequestId,
     params: GetPromptRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpRequest: McpRequest =
-    McpRequest(
-      method = Prompts.get,
-      id = id,
-      params = Some(RequestParams(meta = params.meta)),
-      jsonrpc = jsonrpc
-    )
-}
+)
 
 /** Result of a completed `prompts/get` request.
  *
@@ -157,7 +139,4 @@ case class GetPromptResultResponse(
 case class PromptListChangedNotification(
     params: Option[NotificationParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-) {
-  def toMcpNotification: McpNotification =
-    McpNotification(method = Prompts.listChangedNotification, params = params, jsonrpc = jsonrpc)
-}
+)

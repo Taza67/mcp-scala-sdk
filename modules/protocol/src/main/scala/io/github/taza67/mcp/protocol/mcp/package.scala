@@ -7,10 +7,8 @@ package io.github.taza67.mcp.protocol
  *   - method domains in subpackages (`tools`, `resources`, `prompts`, …)
  *   - shared helpers (`Content`, `Input`) at the package root
  *
- *  Domain helpers named `toMcpRequest` / `toMcpNotification` / `toMcpResponse`
- *  are '''partial''' lifts: they set method / id / meta scaffolding but do not
- *  yet project method-specific fields into `fields` (ADR-0006 codec WIP).
- *  Wire envelopes are projected only via `modules/codec` (no `toJsonRpc` on
- *  [[mcp.McpMessage]]).
+ *  Envelope and params projection (`JsonObject` / JSON text) lives in
+ *  `modules/codec` (ADR-0004, ADR-0006, ADR-0007). Method-specific domain lifts
+ *  are added there as codecs land — not as partial helpers on protocol ADTs.
  */
 package object mcp

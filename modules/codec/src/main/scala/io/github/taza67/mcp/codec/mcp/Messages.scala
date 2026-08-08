@@ -17,7 +17,10 @@ import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
 
 
 
-/** Protocol AST bridge for MCP [[McpMessage]] envelopes (`JsonObject` ↔ ADT). */
+/** Protocol AST bridge for MCP [[McpMessage]] envelopes (`JsonObject` ↔ ADT).
+ *
+ *  Domain list requests: package [[lists]].
+ */
 object Messages {
 
   def fromRequest(request: McpRequest): JsonObject =
@@ -25,7 +28,7 @@ object Messages {
       Request(
         method = request.method,
         id = request.id,
-        params = request.params.map(Params.fromRequestParams),
+        params = request.params.map(Params.fromMcpRequestParams),
         jsonrpc = request.jsonrpc
       )
     )
@@ -66,13 +69,14 @@ object Messages {
     }
 
   def toRequest(request: Request): Either[DecodingError, McpRequest] =
-    Fields.traverseOptional(request.params)(Params.toRequestParams).map { params =>
-      McpRequest(
-        method = request.method,
-        id = request.id,
-        params = params,
-        jsonrpc = request.jsonrpc
-      )
+    Fields.traverseOptional(request.params)(Params.toMcpRequestParams(request.method, _)).map {
+      params =>
+        McpRequest(
+          method = request.method,
+          id = request.id,
+          params = params,
+          jsonrpc = request.jsonrpc
+        )
     }
 
   def toNotification(notification: Notification): Either[DecodingError, McpNotification] =
@@ -105,8 +109,8 @@ object Messages {
       )
     )
 
-  def toMessage(value: JsonValue): Either[DecodingError, McpMessage] =
-    JsonRpcMessages.toMessage(value).flatMap {
+  def toMessage(message: JsonValue): Either[DecodingError, McpMessage] =
+    JsonRpcMessages.toMessage(message).flatMap {
       case r: Request         => toRequest(r)
       case n: Notification    => toNotification(n)
       case s: SuccessResponse => toSuccessResponse(s)

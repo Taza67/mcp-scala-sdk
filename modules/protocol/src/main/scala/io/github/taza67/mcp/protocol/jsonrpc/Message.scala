@@ -34,6 +34,27 @@ sealed trait Message {
   def jsonrpc: JsonRpcVersion
 }
 
+object Message {
+
+  /** Wire key for the JSON-RPC protocol version. */
+  val JsonRpcKey: String = "jsonrpc"
+
+  /** Wire key for the method name on requests and notifications. */
+  val MethodKey: String = "method"
+
+  /** Wire key for the request/response correlation id. */
+  val IdKey: String = "id"
+
+  /** Wire key for request/notification parameters. */
+  val ParamsKey: String = "params"
+
+  /** Wire key for a successful response payload. */
+  val ResultKey: String = "result"
+
+  /** Wire key for an error response payload. */
+  val ErrorKey: String = "error"
+}
+
 /** A request that expects a [[Response]].
  *
  *  @param method Method name to invoke.

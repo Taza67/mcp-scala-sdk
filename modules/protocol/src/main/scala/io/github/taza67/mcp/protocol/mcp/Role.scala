@@ -7,6 +7,9 @@ sealed trait Role {
 
 object Role {
 
+  /** Wire key for sender / recipient role. */
+  val RoleKey: String = "role"
+
   /** Classify a wire role string. */
   def fromValue(value: String): Option[Role] =
     value match {

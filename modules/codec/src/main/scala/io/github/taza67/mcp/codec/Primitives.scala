@@ -6,6 +6,7 @@ import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
+import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.NumberRequestId
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
@@ -29,6 +30,9 @@ private[codec] object Primitives {
       case StringRequestId(value) => JsonString(value)
       case NumberRequestId(value) => JsonNumber(value)
     }
+
+  def fromMethod(method: Method): JsonString =
+    JsonString(method.value)
 
   def fromStringMap(entries: Map[String, String]): JsonObject =
     JsonObject(entries.map { case (key, value) => key -> JsonString(value) })
@@ -66,10 +70,14 @@ private[codec] object Primitives {
   ): Either[DecodingError, JsonArray] =
     value match {
       case a: JsonArray => Right(a)
-      case _            => Left(DecodingError(s"Invalid $label: expected array"))
+      case _            => Left(DecodingError(s"Invalid $label: expected an array"))
     }
 
-  /** Decode an integral JSON number without throwing on non-integral / out-of-range values. */
+  /** Decode an integral JSON number without throwing on non-integral / out-of-range values.
+   *
+   *  `ArithmeticException` from `toLongExact` is caught and translated to [[DecodingError]] —
+   *  an intentional fail-fast boundary at the codec edge.
+   */
   def asLong(
       value: JsonValue,
       label: String = "number"
@@ -84,7 +92,11 @@ private[codec] object Primitives {
       case _ => Left(DecodingError(s"Invalid $label: expected a number"))
     }
 
-  /** Decode a 32-bit integral JSON number without throwing on out-of-range values. */
+  /** Decode a 32-bit integral JSON number without throwing on out-of-range values.
+   *
+   *  `ArithmeticException` from `toIntExact` is caught and translated to [[DecodingError]] —
+   *  an intentional fail-fast boundary at the codec edge.
+   */
   def asInt(
       value: JsonValue,
       label: String = "number"
@@ -144,4 +156,13 @@ private[codec] object Primitives {
 
   def toRequestId(requestId: JsonValue): Either[DecodingError, RequestId] =
     asStringOrLong(requestId, "request ID")(StringRequestId(_), NumberRequestId(_))
+
+  def toMethod(
+      method: JsonValue,
+      label: String = "method"
+  ): Either[DecodingError, Method] =
+    asString(method, label).flatMap { s =>
+      if (s.isBlank()) Left(DecodingError(s"Invalid $label"))
+      else Right(Method(s))
+    }
 }

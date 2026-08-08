@@ -14,6 +14,19 @@ sealed trait ElicitRequestParams {
   def message: String
 }
 
+object ElicitRequestParams {
+
+  /** Wire key for the user-facing message. */
+  val MessageKey: String = "message"
+
+  /** Wire key for elicitation mode (`form` / `url`). */
+  val ModeKey: String = "mode"
+
+  /** Whether wire params are URL-mode (`mode` is url, or `url` is present). */
+  def isUrlMode(mode: Option[String], hasUrl: Boolean): Boolean =
+    mode.contains(ElicitRequestUrlParams.ModeValue) || hasUrl
+}
+
 /** Elicit non-sensitive information via a form in the client.
  *
  *  @param message Message describing what information is requested.
@@ -26,6 +39,19 @@ case class ElicitRequestFormParams(
     mode: Option[String] = Some("form")
 ) extends ElicitRequestParams
 
+object ElicitRequestFormParams {
+
+  /** Wire value for form mode. */
+  val ModeValue: String = "form"
+
+  /** Wire key for the requested form schema. */
+  val RequestedSchemaKey: String = "requestedSchema"
+
+  /** Default form `mode` when absent on the wire. */
+  def modeFromWire(mode: Option[String]): Option[String] =
+    mode.orElse(Some(ModeValue))
+}
+
 /** Elicit information via a URL the user should open (e.g. sensitive credentials).
  *
  *  @param message Explanation of why the interaction is needed.
@@ -35,7 +61,16 @@ case class ElicitRequestUrlParams(
     message: String,
     url: String
 ) extends ElicitRequestParams {
-  val mode: String = "url"
+  val mode: String = ElicitRequestUrlParams.ModeValue
+}
+
+object ElicitRequestUrlParams {
+
+  /** Wire value for URL mode. */
+  val ModeValue: String = "url"
+
+  /** Wire key for the URL the user should open. */
+  val UrlKey: String = "url"
 }
 
 /** Request from the server to elicit additional information from the user via the client.
@@ -48,5 +83,5 @@ case class ElicitRequest(
     params: ElicitRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) {
-  def method: Method = Elicitation.create
+  val method: Method = Elicitation.create
 }

@@ -108,6 +108,23 @@ object Result {
     Result(resultType = CompleteResultType, fields = JsonObject(Map.empty), meta = meta)
 }
 
+/** Shared wire keys for cacheable MCP results (lists, reads, discover). */
+object CacheableResult {
+
+  /** Wire key for cache freshness hint in milliseconds. */
+  val TtlMsKey: String = "ttlMs"
+
+  /** Wire key for cache scope (`public` / `private`). */
+  val CacheScopeKey: String = "cacheScope"
+}
+
+/** Shared wire keys for paginated MCP list results. */
+object PaginatedResult {
+
+  /** Wire key for the next-page cursor token. */
+  val NextCursorKey: String = "nextCursor"
+}
+
 /** MCP message with MCP-typed params/result.
  *
  *  Wire projection (`JsonObject` / JSON text) lives in `modules/codec`

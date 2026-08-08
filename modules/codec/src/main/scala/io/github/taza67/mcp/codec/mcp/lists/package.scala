@@ -1,4 +1,4 @@
 package io.github.taza67.mcp.codec.mcp
 
-/** Protocol AST bridges for paginated MCP list-domain requests. */
+/** Protocol AST bridge for MCP paginated list-domain types (`JsonObject` ↔ ADT). */
 package object lists

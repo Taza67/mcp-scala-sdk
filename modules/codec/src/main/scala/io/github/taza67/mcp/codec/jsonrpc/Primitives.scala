@@ -6,6 +6,7 @@ import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.jsonrpc.JsonRpcVersion
 import io.github.taza67.mcp.protocol.jsonrpc.JsonRpcVersion20
+import io.github.taza67.mcp.protocol.jsonrpc.Message
 import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 
@@ -18,7 +19,7 @@ private[jsonrpc] object Primitives {
     JsonString(jsonRpcVersion.value)
 
   def fromMethod(method: Method): JsonString =
-    JsonString(method.value)
+    SharedPrimitives.fromMethod(method)
 
   def fromRequestId(requestId: RequestId): JsonValue =
     SharedPrimitives.fromRequestId(requestId)
@@ -26,14 +27,11 @@ private[jsonrpc] object Primitives {
   def toJsonRpcVersion(jsonRpcVersion: JsonValue): Either[DecodingError, JsonRpcVersion] =
     jsonRpcVersion match {
       case JsonString(s) if s == "2.0" => Right(JsonRpcVersion20)
-      case _                           => Left(DecodingError("Invalid version"))
+      case v                           => Left(DecodingError(s"Invalid ${Message.JsonRpcKey}: $v"))
     }
 
   def toMethod(method: JsonValue): Either[DecodingError, Method] =
-    method match {
-      case JsonString(s) if !s.isBlank() => Right(Method(s))
-      case _                             => Left(DecodingError("Invalid method"))
-    }
+    SharedPrimitives.toMethod(method)
 
   def toRequestId(requestId: JsonValue): Either[DecodingError, RequestId] =
     SharedPrimitives.toRequestId(requestId)

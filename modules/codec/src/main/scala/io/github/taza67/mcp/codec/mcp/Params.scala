@@ -79,7 +79,8 @@ private[mcp] object Params {
   def toCursor(cursor: JsonValue): Either[DecodingError, Cursor] =
     cursor match {
       case JsonString(s) if !s.isBlank() => Right(Cursor(s))
-      case _                             => Left(DecodingError("Invalid cursor"))
+      case JsonString(s)                 => Left(DecodingError(s"Invalid ${PaginatedRequestParams.CursorKey}: $s"))
+      case other                         => Left(DecodingError(s"Invalid ${PaginatedRequestParams.CursorKey}: $other"))
     }
 
   def toPaginatedRequestParams(
@@ -126,7 +127,7 @@ private[mcp] object Params {
   }
 
   def toResultType(resultType: JsonValue): Either[DecodingError, ResultType] =
-    Primitives.asString(resultType, Result.ResultTypeKey).map(ResultType.fromValue)
+    Primitives.asString(resultType, Result.ResultTypeKey).map(s => ResultType.fromWire(Some(s)))
 
   def toResult(result: JsonObject): Either[DecodingError, Result] = {
     val fields = result.value

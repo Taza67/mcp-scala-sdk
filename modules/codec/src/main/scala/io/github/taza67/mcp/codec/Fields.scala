@@ -35,7 +35,7 @@ private[codec] object Fields {
   ): Either[DecodingError, JsonObject] =
     value match {
       case o: JsonObject => Right(o)
-      case _             => Left(DecodingError(s"Invalid $label: expected object"))
+      case _             => Left(DecodingError(s"Invalid $label: expected an object"))
     }
 
   /** Widen `Map[String, JsonObject]` to AST (`Map` is invariant in the value type). */
@@ -99,6 +99,12 @@ private[codec] object Fields {
   ): Either[DecodingError, Option[Boolean]] =
     optional(fields, key)(Primitives.asBool(_, key))
 
+  def optionalInt(
+      fields: Map[String, JsonValue],
+      key: String
+  ): Either[DecodingError, Option[Int]] =
+    optional(fields, key)(Primitives.asInt(_, key))
+
   /** Optional field that may be any JSON value (e.g. `error.data`). */
   def optionalValue(
       fields: Map[String, JsonValue],
@@ -121,4 +127,27 @@ private[codec] object Fields {
       case None    => Right(None)
       case Some(a) => f(a).map(Some(_))
     }
+
+  /** Fail unless `actual` equals `expected` (e.g. fixed wire `type` values). */
+  def requireEquals[A](
+      actual: A,
+      expected: A,
+      key: String
+  ): Either[DecodingError, Unit] =
+    if (actual == expected) Right(())
+    else Left(DecodingError(s"Invalid $key: expected $expected"))
+
+  /** Fail unless at least one of the optional fields is present. */
+  def requireAtLeastOne(
+      options: (String, Option[_])*
+  ): Either[DecodingError, Unit] = {
+    val present = options.foldLeft(false) { case (acc, (_, value)) =>
+      acc || value.isDefined
+    }
+    if (present) Right(())
+    else {
+      val keys = options.map(_._1).mkString(" or ")
+      Left(DecodingError(s"At least one of $keys must be present"))
+    }
+  }
 }

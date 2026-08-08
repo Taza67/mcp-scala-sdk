@@ -43,6 +43,10 @@ case class Icon(
 )
 
 object Icon {
+
+  /** Semantic label for an icon object in list contexts. */
+  val IconKey: String = "icon"
+
   val SrcKey: String = "src"
   val MimeTypeKey: String = "mimeType"
   val SizesKey: String = "sizes"

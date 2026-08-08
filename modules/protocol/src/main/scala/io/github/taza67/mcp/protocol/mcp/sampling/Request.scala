@@ -44,6 +44,39 @@ case class CreateMessageRequestParams(
     toolChoice: Option[ToolChoice] = None
 )
 
+object CreateMessageRequestParams {
+
+  /** Wire key for conversation messages. */
+  val MessagesKey: String = "messages"
+
+  /** Wire key for requested max tokens. */
+  val MaxTokensKey: String = "maxTokens"
+
+  /** Wire key for advisory model preferences. */
+  val ModelPreferencesKey: String = "modelPreferences"
+
+  /** Wire key for optional system prompt. */
+  val SystemPromptKey: String = "systemPrompt"
+
+  /** Wire key for MCP context inclusion. */
+  val IncludeContextKey: String = "includeContext"
+
+  /** Wire key for sampling temperature. */
+  val TemperatureKey: String = "temperature"
+
+  /** Wire key for stop sequences. */
+  val StopSequencesKey: String = "stopSequences"
+
+  /** Wire key for provider-specific metadata. */
+  val MetadataKey: String = "metadata"
+
+  /** Wire key for tools available during sampling. */
+  val ToolsKey: String = "tools"
+
+  /** Wire key for tool-choice policy. */
+  val ToolChoiceKey: String = "toolChoice"
+}
+
 /** Server→client request to sample an LLM via the client.
  *
  *  @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months.
@@ -53,7 +86,7 @@ case class CreateMessageRequest(
     params: CreateMessageRequestParams,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) {
-  def method: Method = Sampling.createMessage
+  val method: Method = Sampling.createMessage
 }
 
 /** Client response to a [[CreateMessageRequest]].

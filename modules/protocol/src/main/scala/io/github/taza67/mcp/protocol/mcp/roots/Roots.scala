@@ -65,7 +65,9 @@ case class ListRootsRequest(
     id: RequestId,
     params: Option[ListRootsRequestParams] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
-)
+) {
+  val method: Method = Roots.list
+}
 
 /** Client response to a [[ListRootsRequest]].
  *

@@ -22,6 +22,15 @@ sealed trait Error {
 
 object Error {
 
+  /** Wire key for the JSON-RPC error code. */
+  val CodeKey: String = "code"
+
+  /** Wire key for the JSON-RPC error message. */
+  val MessageKey: String = "message"
+
+  /** Wire key for optional JSON-RPC error data. */
+  val DataKey: String = "data"
+
   /** Classify a JSON-RPC error payload into the typed hierarchy.
    *
    *  Known codes become dedicated case classes. Structured MCP errors that lack

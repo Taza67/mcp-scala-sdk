@@ -38,6 +38,36 @@ case class Resource(
     meta: Option[MetaObject] = None
 )
 
+object Resource {
+
+  /** Wire key for the programmatic resource name. */
+  val NameKey: String = "name"
+
+  /** Wire key for the resource URI. */
+  val UriKey: String = "uri"
+
+  /** Wire key for optional human-readable title. */
+  val TitleKey: String = "title"
+
+  /** Wire key for optional description. */
+  val DescriptionKey: String = "description"
+
+  /** Wire key for optional MIME type. */
+  val MimeTypeKey: String = "mimeType"
+
+  /** Wire key for optional raw size in bytes. */
+  val SizeKey: String = "size"
+
+  /** Wire key for optional UI icons. */
+  val IconsKey: String = "icons"
+
+  /** Wire key for optional display annotations. */
+  val AnnotationsKey: String = "annotations"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
+
 /** Template description for parameterized resources available on the server.
  *
  *  @param name Programmatic name; also display fallback when `title` is absent.
@@ -59,6 +89,33 @@ case class ResourceTemplate(
     annotations: Option[Annotations] = None,
     meta: Option[MetaObject] = None
 )
+
+object ResourceTemplate {
+
+  /** Wire key for the programmatic template name. */
+  val NameKey: String = "name"
+
+  /** Wire key for the URI template (RFC 6570). */
+  val UriTemplateKey: String = "uriTemplate"
+
+  /** Wire key for optional human-readable title. */
+  val TitleKey: String = "title"
+
+  /** Wire key for optional description. */
+  val DescriptionKey: String = "description"
+
+  /** Wire key for optional MIME type. */
+  val MimeTypeKey: String = "mimeType"
+
+  /** Wire key for optional UI icons. */
+  val IconsKey: String = "icons"
+
+  /** Wire key for optional display annotations. */
+  val AnnotationsKey: String = "annotations"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
 
 /** Sent from the client to list resources the server offers (paginated). */
 case class ListResourcesRequest(
@@ -84,6 +141,12 @@ case class ListResourcesResult(
     resultType: ResultType = CompleteResultType,
     meta: Option[ResultMeta] = None
 )
+
+object ListResourcesResult {
+
+  /** Wire key for the resources array. */
+  val ResourcesKey: String = "resources"
+}
 
 /** Successful JSON-RPC response to a `resources/list` request. */
 case class ListResourcesResultResponse(
@@ -135,6 +198,12 @@ case class ReadResourceResult(
     meta: Option[ResultMeta] = None
 )
 
+object ReadResourceResult {
+
+  /** Wire key for resource content payloads. */
+  val ContentsKey: String = "contents"
+}
+
 /** Successful JSON-RPC response to a `resources/read` request. */
 case class ReadResourceResultResponse(
     result: RequestOutcome[ReadResourceResult],
@@ -166,6 +235,12 @@ case class ListResourceTemplatesResult(
     resultType: ResultType = CompleteResultType,
     meta: Option[ResultMeta] = None
 )
+
+object ListResourceTemplatesResult {
+
+  /** Wire key for the resource-templates array. */
+  val ResourceTemplatesKey: String = "resourceTemplates"
+}
 
 /** Successful JSON-RPC response to a `resources/templates/list` request. */
 case class ListResourceTemplatesResultResponse(

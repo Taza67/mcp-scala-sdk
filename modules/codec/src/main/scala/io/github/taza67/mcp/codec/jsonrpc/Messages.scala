@@ -20,45 +20,45 @@ object Messages {
 
   private def fromRequest(request: Request): JsonObject = {
     val base = Map(
-      "method" -> Primitives.fromMethod(request.method),
-      "id" -> Primitives.fromRequestId(request.id),
-      "jsonrpc" -> Primitives.fromJsonRpcVersion(request.jsonrpc)
+      Message.MethodKey -> Primitives.fromMethod(request.method),
+      Message.IdKey -> Primitives.fromRequestId(request.id),
+      Message.JsonRpcKey -> Primitives.fromJsonRpcVersion(request.jsonrpc)
     )
-    JsonObject(Fields.withOptional(base, "params" -> request.params))
+    JsonObject(Fields.withOptional(base, Message.ParamsKey -> request.params))
   }
 
   private def fromNotification(notification: Notification): JsonObject = {
     val base =
       Map(
-        "method" -> Primitives.fromMethod(notification.method),
-        "jsonrpc" -> Primitives.fromJsonRpcVersion(notification.jsonrpc)
+        Message.MethodKey -> Primitives.fromMethod(notification.method),
+        Message.JsonRpcKey -> Primitives.fromJsonRpcVersion(notification.jsonrpc)
       )
-    JsonObject(Fields.withOptional(base, "params" -> notification.params))
+    JsonObject(Fields.withOptional(base, Message.ParamsKey -> notification.params))
   }
 
   private def fromSuccessResponse(successResponse: SuccessResponse): JsonObject =
     JsonObject(
       Map(
-        "result" -> successResponse.result,
-        "id" -> Primitives.fromRequestId(successResponse.id),
-        "jsonrpc" -> Primitives.fromJsonRpcVersion(successResponse.jsonrpc)
+        Message.ResultKey -> successResponse.result,
+        Message.IdKey -> Primitives.fromRequestId(successResponse.id),
+        Message.JsonRpcKey -> Primitives.fromJsonRpcVersion(successResponse.jsonrpc)
       )
     )
 
   private def fromError(error: Error): JsonObject = {
     val base = Map(
-      "code" -> JsonNumber(error.code),
-      "message" -> JsonString(error.message)
+      Error.CodeKey -> JsonNumber(error.code),
+      Error.MessageKey -> JsonString(error.message)
     )
-    JsonObject(Fields.withOptional(base, "data" -> error.data))
+    JsonObject(Fields.withOptional(base, Error.DataKey -> error.data))
   }
 
   private def fromErrorResponse(errorResponse: ErrorResponse): JsonObject =
     JsonObject(
       Map(
-        "error" -> fromError(errorResponse.error),
-        "id" -> Primitives.fromRequestId(errorResponse.id),
-        "jsonrpc" -> Primitives.fromJsonRpcVersion(errorResponse.jsonrpc)
+        Message.ErrorKey -> fromError(errorResponse.error),
+        Message.IdKey -> Primitives.fromRequestId(errorResponse.id),
+        Message.JsonRpcKey -> Primitives.fromJsonRpcVersion(errorResponse.jsonrpc)
       )
     )
 
@@ -73,47 +73,47 @@ object Messages {
   def toRequest(request: JsonObject): Either[DecodingError, Request] = {
     val fields = request.value
     for {
-      method <- Fields.required(fields, "method").flatMap(Primitives.toMethod)
-      id <- Fields.required(fields, "id").flatMap(Primitives.toRequestId)
-      params <- Fields.optionalObject(fields, "params")
-      jsonrpc <- Fields.required(fields, "jsonrpc").flatMap(Primitives.toJsonRpcVersion)
+      method <- Fields.required(fields, Message.MethodKey).flatMap(Primitives.toMethod)
+      id <- Fields.required(fields, Message.IdKey).flatMap(Primitives.toRequestId)
+      params <- Fields.optionalObject(fields, Message.ParamsKey)
+      jsonrpc <- Fields.required(fields, Message.JsonRpcKey).flatMap(Primitives.toJsonRpcVersion)
     } yield Request(method, id, params, jsonrpc)
   }
 
   def toNotification(notification: JsonObject): Either[DecodingError, Notification] = {
     val fields = notification.value
     for {
-      method <- Fields.required(fields, "method").flatMap(Primitives.toMethod)
-      params <- Fields.optionalObject(fields, "params")
-      jsonrpc <- Fields.required(fields, "jsonrpc").flatMap(Primitives.toJsonRpcVersion)
+      method <- Fields.required(fields, Message.MethodKey).flatMap(Primitives.toMethod)
+      params <- Fields.optionalObject(fields, Message.ParamsKey)
+      jsonrpc <- Fields.required(fields, Message.JsonRpcKey).flatMap(Primitives.toJsonRpcVersion)
     } yield Notification(method, params, jsonrpc)
   }
 
   def toSuccessResponse(successResponse: JsonObject): Either[DecodingError, SuccessResponse] = {
     val fields = successResponse.value
     for {
-      result <- Fields.required(fields, "result")
-      id <- Fields.required(fields, "id").flatMap(Primitives.toRequestId)
-      jsonrpc <- Fields.required(fields, "jsonrpc").flatMap(Primitives.toJsonRpcVersion)
+      result <- Fields.required(fields, Message.ResultKey)
+      id <- Fields.required(fields, Message.IdKey).flatMap(Primitives.toRequestId)
+      jsonrpc <- Fields.required(fields, Message.JsonRpcKey).flatMap(Primitives.toJsonRpcVersion)
     } yield SuccessResponse(result, id, jsonrpc)
   }
 
   def toError(error: JsonObject): Either[DecodingError, Error] = {
     val fields = error.value
     for {
-      code <- Fields.required(fields, "code").flatMap(Primitives.toErrorCode)
-      message <- Fields.required(fields, "message").flatMap(Primitives.toErrorMessage)
-      data <- Fields.optionalValue(fields, "data")
+      code <- Fields.required(fields, Error.CodeKey).flatMap(Primitives.toErrorCode)
+      message <- Fields.required(fields, Error.MessageKey).flatMap(Primitives.toErrorMessage)
+      data <- Fields.optionalValue(fields, Error.DataKey)
     } yield Error.classify(code, message, data)
   }
 
   def toErrorResponse(errorResponse: JsonObject): Either[DecodingError, ErrorResponse] = {
     val fields = errorResponse.value
     for {
-      errorObject <- Fields.requiredObject(fields, "error")
+      errorObject <- Fields.requiredObject(fields, Message.ErrorKey)
       error <- toError(errorObject)
-      id <- Fields.required(fields, "id").flatMap(Primitives.toRequestId)
-      jsonrpc <- Fields.required(fields, "jsonrpc").flatMap(Primitives.toJsonRpcVersion)
+      id <- Fields.required(fields, Message.IdKey).flatMap(Primitives.toRequestId)
+      jsonrpc <- Fields.required(fields, Message.JsonRpcKey).flatMap(Primitives.toJsonRpcVersion)
     } yield ErrorResponse(error, id, jsonrpc)
   }
 
@@ -122,10 +122,10 @@ object Messages {
 
   private def toMessageObject(message: JsonObject): Either[DecodingError, Message] = {
     val fields = message.value
-    val hasMethod = fields.contains("method")
-    val hasId = fields.contains("id")
-    val hasResult = fields.contains("result")
-    val hasError = fields.contains("error")
+    val hasMethod = fields.contains(Message.MethodKey)
+    val hasId = fields.contains(Message.IdKey)
+    val hasResult = fields.contains(Message.ResultKey)
+    val hasError = fields.contains(Message.ErrorKey)
 
     (hasMethod, hasId, hasResult, hasError) match {
       case (true, true, false, false)  => toRequest(message)

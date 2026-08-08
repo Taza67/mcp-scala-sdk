@@ -13,6 +13,7 @@ import io.github.taza67.mcp.protocol.mcp.AudioContent
 import io.github.taza67.mcp.protocol.mcp.BlobResourceContents
 import io.github.taza67.mcp.protocol.mcp.ContentBlock
 import io.github.taza67.mcp.protocol.mcp.EmbeddedResource
+import io.github.taza67.mcp.protocol.mcp.Icon
 import io.github.taza67.mcp.protocol.mcp.ImageContent
 import io.github.taza67.mcp.protocol.mcp.MetaObject
 import io.github.taza67.mcp.protocol.mcp.ResourceContents
@@ -30,12 +31,7 @@ import io.github.taza67.mcp.protocol.mcp.sampling.SingleSamplingContent
 
 
 
-/** Protocol AST bridge for MCP content blocks (`JsonObject` ↔ ADT).
- *
- *  Covers [[Role]], [[Annotations]], [[ContentBlock]],
- *  [[SamplingMessageContentBlock]], [[ResourceContents]], and
- *  [[SamplingMessageContent]].
- */
+/** Protocol AST bridge for MCP content blocks (`JsonObject` ↔ ADT). */
 object Content {
 
   def fromRole(role: Role): JsonString =
@@ -227,8 +223,8 @@ object Content {
     }
 
   def toRole(role: JsonValue): Either[DecodingError, Role] =
-    Primitives.asString(role, "role").flatMap { s =>
-      Role.fromValue(s).toRight(DecodingError(s"Invalid role: $s"))
+    Primitives.asString(role, Role.RoleKey).flatMap { s =>
+      Role.fromValue(s).toRight(DecodingError(s"Invalid ${Role.RoleKey}: $s"))
     }
 
   def toAnnotations(annotations: JsonObject): Either[DecodingError, Annotations] = {
@@ -303,7 +299,7 @@ object Content {
       uri <- Fields.requiredString(fields, ResourceContents.UriKey)
       text <- Fields.requiredString(fields, TextResourceContents.TextKey)
       mimeType <- Fields.optionalString(fields, ResourceContents.MimeTypeKey)
-      meta <- optionalResourceMeta(fields)
+      meta <- optionalMeta(fields, ResourceContents.MetaKey)
     } yield TextResourceContents(uri = uri, text = text, mimeType = mimeType, meta = meta)
   }
 
@@ -315,12 +311,13 @@ object Content {
       uri <- Fields.requiredString(fields, ResourceContents.UriKey)
       blob <- Fields.requiredString(fields, BlobResourceContents.BlobKey)
       mimeType <- Fields.optionalString(fields, ResourceContents.MimeTypeKey)
-      meta <- optionalResourceMeta(fields)
+      meta <- optionalMeta(fields, ResourceContents.MetaKey)
     } yield BlobResourceContents(uri = uri, blob = blob, mimeType = mimeType, meta = meta)
   }
 
   def toResourceContents(
-      resourceContents: JsonObject
+      resourceContents: JsonObject,
+      label: String = EmbeddedResource.ResourceKey
   ): Either[DecodingError, ResourceContents] = {
     val fields = resourceContents.value
     if (fields.contains(TextResourceContents.TextKey))
@@ -330,7 +327,7 @@ object Content {
     else
       Left(
         DecodingError(
-          s"Invalid resource contents: expected ${TextResourceContents.TextKey} or ${BlobResourceContents.BlobKey}"
+          s"Invalid $label: expected ${TextResourceContents.TextKey} or ${BlobResourceContents.BlobKey}"
         )
       )
   }
@@ -347,7 +344,7 @@ object Content {
         Primitives.asLong(_, ResourceLink.SizeKey)
       )
       icons <- Fields.optionalList(fields, ResourceLink.IconsKey) { v =>
-        Fields.asObject(v, "icon").flatMap(Meta.toIcon)
+        Fields.asObject(v, Icon.IconKey).flatMap(Meta.toIcon)
       }
       annotations <- optionalAnnotations(fields)
       meta <- optionalMeta(fields)
@@ -371,7 +368,7 @@ object Content {
     for {
       resource <- Fields
         .requiredObject(fields, EmbeddedResource.ResourceKey)
-        .flatMap(toResourceContents)
+        .flatMap(toResourceContents(_))
       annotations <- optionalAnnotations(fields)
       meta <- optionalMeta(fields)
     } yield EmbeddedResource(resource = resource, annotations = annotations, meta = meta)
@@ -385,7 +382,7 @@ object Content {
       case "resource_link" => toResourceLink(contentBlock)
       case "resource"      => toEmbeddedResource(contentBlock)
       case other =>
-        Left(DecodingError(s"Invalid ${ContentBlock.TypeKey}: unsupported content block `$other`"))
+        Left(DecodingError(s"Invalid ${ContentBlock.TypeKey}: $other"))
     }
 
   def toToolResultContent(
@@ -425,7 +422,7 @@ object Content {
       case other =>
         Left(
           DecodingError(
-            s"Invalid ${ContentBlock.TypeKey}: unsupported sampling content block `$other`"
+            s"Invalid ${ContentBlock.TypeKey}: $other"
           )
         )
     }
@@ -460,16 +457,10 @@ object Content {
     )
 
   private def optionalMeta(
-      fields: Map[String, JsonValue]
+      fields: Map[String, JsonValue],
+      metaKey: String = ContentBlock.MetaKey
   ): Either[DecodingError, Option[MetaObject]] =
-    Fields.optional(fields, ContentBlock.MetaKey)(v =>
-      Fields.asObject(v, ContentBlock.MetaKey).map(obj => MetaObject(obj.value))
-    )
-
-  private def optionalResourceMeta(
-      fields: Map[String, JsonValue]
-  ): Either[DecodingError, Option[MetaObject]] =
-    Fields.optional(fields, ResourceContents.MetaKey)(v =>
-      Fields.asObject(v, ResourceContents.MetaKey).map(obj => MetaObject(obj.value))
+    Fields.optional(fields, metaKey)(v =>
+      Fields.asObject(v, metaKey).map(obj => MetaObject(obj.value))
     )
 }

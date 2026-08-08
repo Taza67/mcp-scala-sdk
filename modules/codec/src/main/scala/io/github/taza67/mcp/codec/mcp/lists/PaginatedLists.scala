@@ -19,11 +19,7 @@ import io.github.taza67.mcp.protocol.mcp.tools.Tools
 
 
 
-/** Protocol AST bridge for paginated MCP list requests (`JsonObject` ↔ ADT).
- *
- *  Covers the list methods fixed in ADR-0007 (`tools/list`, `prompts/list`,
- *  `resources/list`, `resources/templates/list`).
- */
+/** Protocol AST bridge for paginated MCP list requests (`JsonObject` ↔ ADT). */
 object PaginatedLists {
 
   private def fromPaginatedList(
@@ -31,15 +27,10 @@ object PaginatedLists {
       id: RequestId,
       params: PaginatedRequestParams,
       jsonrpc: JsonRpcVersion
-  ): JsonObject = {
-    require(
-      PaginatedListMethods.All.contains(method),
-      s"${method.value} is not a paginated list method"
-    )
+  ): JsonObject =
     Messages.fromRequest(
       McpRequest(method = method, id = id, params = Some(params), jsonrpc = jsonrpc)
     )
-  }
 
   def fromListToolsRequest(listToolsRequest: ListToolsRequest): JsonObject =
     fromPaginatedList(
@@ -80,22 +71,20 @@ object PaginatedLists {
       message: JsonValue
   )(
       build: (RequestId, PaginatedRequestParams, JsonRpcVersion) => A
-  ): Either[DecodingError, A] = {
-    require(
-      PaginatedListMethods.All.contains(expected),
-      s"${expected.value} is not a paginated list method"
-    )
-    Messages.toMessage(message).flatMap {
-      case McpRequest(`expected`, id, Some(params: PaginatedRequestParams), jsonrpc) =>
-        Right(build(id, params, jsonrpc))
-      case McpRequest(`expected`, _, None, _) =>
-        Left(DecodingError(s"${expected.value} requires params"))
-      case McpRequest(`expected`, _, Some(_), _) =>
-        Left(DecodingError(s"${expected.value} requires paginated params"))
-      case _ =>
-        Left(DecodingError(s"Expected ${expected.value} request"))
-    }
-  }
+  ): Either[DecodingError, A] =
+    if (!PaginatedListMethods.All.contains(expected))
+      Left(DecodingError(s"${expected.value} is not a paginated list method"))
+    else
+      Messages.toMessage(message).flatMap {
+        case McpRequest(`expected`, id, Some(params: PaginatedRequestParams), jsonrpc) =>
+          Right(build(id, params, jsonrpc))
+        case McpRequest(`expected`, _, None, _) =>
+          Left(DecodingError(s"${expected.value} requires params"))
+        case McpRequest(`expected`, _, Some(_), _) =>
+          Left(DecodingError(s"${expected.value} requires paginated params"))
+        case _ =>
+          Left(DecodingError(s"Expected ${expected.value} request"))
+      }
 
   def toListToolsRequest(message: JsonValue): Either[DecodingError, ListToolsRequest] =
     toPaginatedList(Tools.list, message)(ListToolsRequest.apply)

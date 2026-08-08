@@ -45,6 +45,18 @@ case class DiscoverResult(
     meta: Option[ResultMeta] = None
 )
 
+object DiscoverResult {
+
+  /** Wire key for supported protocol versions. */
+  val SupportedVersionsKey: String = "supportedVersions"
+
+  /** Wire key for server capabilities. */
+  val CapabilitiesKey: String = "capabilities"
+
+  /** Wire key for optional natural-language usage instructions. */
+  val InstructionsKey: String = "instructions"
+}
+
 /** Successful JSON-RPC response to a `server/discover` request.
  *
  *  @param result Typed discover payload.

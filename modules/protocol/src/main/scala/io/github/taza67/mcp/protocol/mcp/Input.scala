@@ -26,6 +26,15 @@ sealed trait InputRequest {
   def method: Method
 }
 
+object InputRequest {
+
+  /** Wire key for the nested request method. */
+  val MethodKey: String = "method"
+
+  /** Wire key for optional nested request params. */
+  val ParamsKey: String = "params"
+}
+
 /** Nested `elicitation/create` request inside [[InputRequests]]. */
 case class ElicitationInputRequest(
     params: ElicitRequestParams

@@ -26,6 +26,21 @@ case class PromptArgument(
     required: Option[Boolean] = None
 )
 
+object PromptArgument {
+
+  /** Wire key for the programmatic argument name. */
+  val NameKey: String = "name"
+
+  /** Wire key for optional human-readable title. */
+  val TitleKey: String = "title"
+
+  /** Wire key for optional description. */
+  val DescriptionKey: String = "description"
+
+  /** Wire key for whether the argument is required. */
+  val RequiredKey: String = "required"
+}
+
 /** A prompt or prompt template that the server offers.
  *
  *  @param name Programmatic name; also display fallback when `title` is absent.
@@ -44,6 +59,27 @@ case class Prompt(
     meta: Option[MetaObject] = None
 )
 
+object Prompt {
+
+  /** Wire key for the programmatic prompt name. */
+  val NameKey: String = "name"
+
+  /** Wire key for optional human-readable title. */
+  val TitleKey: String = "title"
+
+  /** Wire key for optional description. */
+  val DescriptionKey: String = "description"
+
+  /** Wire key for optional accepted arguments. */
+  val ArgumentsKey: String = "arguments"
+
+  /** Wire key for optional UI icons. */
+  val IconsKey: String = "icons"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
+
 /** A message returned as part of a prompt.
  *
  *  Similar to a sampling message, but also supports embedding resources from
@@ -56,6 +92,15 @@ case class PromptMessage(
     role: Role,
     content: ContentBlock
 )
+
+object PromptMessage {
+
+  /** Wire key for the message role. */
+  val RoleKey: String = "role"
+
+  /** Wire key for the message content block. */
+  val ContentKey: String = "content"
+}
 
 /** Sent from the client to list prompts the server offers (paginated). */
 case class ListPromptsRequest(
@@ -81,6 +126,12 @@ case class ListPromptsResult(
     resultType: ResultType = CompleteResultType,
     meta: Option[ResultMeta] = None
 )
+
+object ListPromptsResult {
+
+  /** Wire key for the prompts array. */
+  val PromptsKey: String = "prompts"
+}
 
 /** Successful JSON-RPC response to a `prompts/list` request. */
 case class ListPromptsResultResponse(
@@ -134,6 +185,15 @@ case class GetPromptResult(
     resultType: ResultType = CompleteResultType,
     meta: Option[ResultMeta] = None
 )
+
+object GetPromptResult {
+
+  /** Wire key for prompt messages. */
+  val MessagesKey: String = "messages"
+
+  /** Wire key for optional prompt description. */
+  val DescriptionKey: String = "description"
+}
 
 /** Successful JSON-RPC response to a `prompts/get` request. */
 case class GetPromptResultResponse(

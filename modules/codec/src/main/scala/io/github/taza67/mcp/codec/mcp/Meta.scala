@@ -22,15 +22,7 @@ import io.github.taza67.mcp.protocol.mcp.StringProgressToken
 
 
 
-/** Protocol AST bridge for MCP `_meta` values (`JsonObject` / `JsonValue` ↔ ADT).
- *
- *  Package façades: [[Messages]] for envelopes, [[Meta]] for `_meta` values,
- *  [[Content]] for content blocks, package [[lists]] for paginated lists, and
- *  packages [[tools]] / [[resources]] / [[prompts]] / [[elicitation]] / [[roots]] /
- *  [[sampling]] for domain bridges.
- *  Helpers: package-private [[Capabilities]], [[Params]], [[Input]], and
- *  [[PlainRequests]].
- */
+/** Protocol AST bridge for MCP `_meta` values (`JsonObject` / `JsonValue` ↔ ADT). */
 object Meta {
 
   def fromNotificationMeta(notificationMeta: NotificationMeta): JsonObject =
@@ -84,6 +76,7 @@ object Meta {
   def fromMcpProtocolVersion(version: McpProtocolVersion): JsonString =
     JsonString(version.value)
 
+  /** @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months. */
   def fromLoggingLevel(level: LoggingLevel): JsonString =
     JsonString(level.value)
 
@@ -125,7 +118,7 @@ object Meta {
     Primitives.asString(iconTheme, Icon.ThemeKey).flatMap { s =>
       IconTheme
         .fromValue(s)
-        .toRight(DecodingError(s"Invalid icon theme: $s"))
+        .toRight(DecodingError(s"Invalid ${Icon.ThemeKey}: $s"))
     }
 
   def toIcon(icon: JsonObject): Either[DecodingError, Icon] = {
@@ -133,7 +126,7 @@ object Meta {
     for {
       src <- Fields.requiredString(fields, Icon.SrcKey)
       mimeType <- Fields.optionalString(fields, Icon.MimeTypeKey)
-      sizes <- Fields.optionalList(fields, Icon.SizesKey)(Primitives.asString(_, "size"))
+      sizes <- Fields.optionalList(fields, Icon.SizesKey)(Primitives.asString(_, Icon.SizesKey))
       theme <- Fields.optional(fields, Icon.ThemeKey)(toIconTheme)
     } yield Icon(src, mimeType, sizes, theme)
   }
@@ -147,7 +140,7 @@ object Meta {
       description <- Fields.optionalString(fields, Implementation.DescriptionKey)
       websiteUrl <- Fields.optionalString(fields, Implementation.WebsiteUrlKey)
       icons <- Fields.optionalList(fields, Implementation.IconsKey) { v =>
-        Fields.asObject(v, "icon").flatMap(toIcon)
+        Fields.asObject(v, Icon.IconKey).flatMap(toIcon)
       }
     } yield Implementation(name, version, title, description, websiteUrl, icons)
   }
@@ -166,14 +159,15 @@ object Meta {
     Primitives.asString(version, RequestMeta.ProtocolVersionKey).flatMap { s =>
       McpProtocolVersion
         .fromValue(s)
-        .toRight(DecodingError(s"Unsupported protocol version: $s"))
+        .toRight(DecodingError(s"Invalid ${RequestMeta.ProtocolVersionKey}: $s"))
     }
 
+  /** @deprecated Deprecated as of protocol version 2026-07-28 (SEP-2577). Remains for at least twelve months. */
   def toLoggingLevel(level: JsonValue): Either[DecodingError, LoggingLevel] =
     Primitives.asString(level, RequestMeta.LogLevelKey).flatMap { s =>
       LoggingLevel
         .fromValue(s)
-        .toRight(DecodingError(s"Invalid log level: $s"))
+        .toRight(DecodingError(s"Invalid ${RequestMeta.LogLevelKey}: $s"))
     }
 
   def toProgressToken(token: JsonValue): Either[DecodingError, ProgressToken] =

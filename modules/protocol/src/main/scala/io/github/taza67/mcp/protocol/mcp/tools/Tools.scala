@@ -37,6 +37,24 @@ case class ToolAnnotations(
     openWorldHint: Option[Boolean] = None
 )
 
+object ToolAnnotations {
+
+  /** Wire key for optional display title hint. */
+  val TitleKey: String = "title"
+
+  /** Wire key for read-only hint. */
+  val ReadOnlyHintKey: String = "readOnlyHint"
+
+  /** Wire key for destructive-update hint. */
+  val DestructiveHintKey: String = "destructiveHint"
+
+  /** Wire key for idempotent-call hint. */
+  val IdempotentHintKey: String = "idempotentHint"
+
+  /** Wire key for open-world hint. */
+  val OpenWorldHintKey: String = "openWorldHint"
+}
+
 /** JSON Schema for tool input: root `type` is always `"object"`.
  *
  *  Any JSON Schema 2020-12 keyword may appear in [[fields]] (`properties`,
@@ -50,6 +68,18 @@ case class ToolInputSchema(
     schema: Option[String] = None
 )
 
+object ToolInputSchema {
+
+  /** Wire key for schema `type`. */
+  val TypeKey: String = "type"
+
+  /** Wire `type` value for tool input schemas. */
+  val TypeValue: String = "object"
+
+  /** Wire key for optional `$schema` URI. */
+  val SchemaKey: String = "$schema"
+}
+
 /** Optional JSON Schema describing [[CallToolResult.structuredContent]].
  *
  *  @param fields Schema body (any JSON Schema 2020-12 keywords).
@@ -59,6 +89,12 @@ case class ToolOutputSchema(
     fields: JsonObject = JsonObject(Map.empty),
     schema: Option[String] = None
 )
+
+object ToolOutputSchema {
+
+  /** Wire key for optional `$schema` URI. */
+  val SchemaKey: String = "$schema"
+}
 
 /** Definition of a tool the client can call.
  *
@@ -81,6 +117,33 @@ case class Tool(
     icons: Option[List[Icon]] = None,
     meta: Option[MetaObject] = None
 )
+
+object Tool {
+
+  /** Wire key for the programmatic tool name. */
+  val NameKey: String = "name"
+
+  /** Wire key for the input JSON Schema. */
+  val InputSchemaKey: String = "inputSchema"
+
+  /** Wire key for optional human-readable title. */
+  val TitleKey: String = "title"
+
+  /** Wire key for optional description. */
+  val DescriptionKey: String = "description"
+
+  /** Wire key for optional output JSON Schema. */
+  val OutputSchemaKey: String = "outputSchema"
+
+  /** Wire key for optional annotations. */
+  val AnnotationsKey: String = "annotations"
+
+  /** Wire key for optional UI icons. */
+  val IconsKey: String = "icons"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}
 
 /** Parameters for a `tools/call` request.
  *
@@ -137,6 +200,18 @@ case class CallToolResult(
     meta: Option[ResultMeta] = None
 )
 
+object CallToolResult {
+
+  /** Wire key for unstructured tool output blocks. */
+  val ContentKey: String = "content"
+
+  /** Wire key for optional structured JSON output. */
+  val StructuredContentKey: String = "structuredContent"
+
+  /** Wire key for optional tool-originated error flag. */
+  val IsErrorKey: String = "isError"
+}
+
 /** Successful JSON-RPC response to a `tools/call` request. */
 case class CallToolResultResponse(
     result: RequestOutcome[CallToolResult],
@@ -168,6 +243,12 @@ case class ListToolsResult(
     resultType: ResultType = CompleteResultType,
     meta: Option[ResultMeta] = None
 )
+
+object ListToolsResult {
+
+  /** Wire key for the tools array. */
+  val ToolsKey: String = "tools"
+}
 
 /** Successful JSON-RPC response to a `tools/list` request. */
 case class ListToolsResultResponse(

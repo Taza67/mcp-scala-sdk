@@ -1,6 +1,6 @@
 package io.github.taza67.mcp.protocol.mcp.sampling
 
-import io.github.taza67.mcp.protocol.mcp.{MetaObject, Role, SamplingMessageContentBlock}
+import io.github.taza67.mcp.protocol.mcp.{MetaObject, RequestParams, Role, SamplingMessageContentBlock}
 
 
 
@@ -30,3 +30,15 @@ case class SamplingMessage(
     content: SamplingMessageContent,
     meta: Option[MetaObject] = None
 )
+
+object SamplingMessage {
+
+  /** Wire key for the message role. */
+  val RoleKey: String = "role"
+
+  /** Wire key for sampling content (object or array). */
+  val ContentKey: String = "content"
+
+  /** Wire key for optional open metadata. */
+  val MetaKey: String = RequestParams.MetaKey
+}

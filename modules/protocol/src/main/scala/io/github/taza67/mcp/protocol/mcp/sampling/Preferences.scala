@@ -10,6 +10,12 @@ case class ModelHint(
     name: Option[String] = None
 )
 
+object ModelHint {
+
+  /** Wire key for the optional model-name hint. */
+  val NameKey: String = "name"
+}
+
 /** Advisory preferences for which model the client should pick when sampling.
  *
  *  Clients MAY ignore these. When multiple [[hints]] are given, clients MUST
@@ -30,6 +36,21 @@ case class ModelPreferences(
     intelligencePriority: Option[Double] = None
 )
 
+object ModelPreferences {
+
+  /** Wire key for ordered model hints. */
+  val HintsKey: String = "hints"
+
+  /** Wire key for cost priority. */
+  val CostPriorityKey: String = "costPriority"
+
+  /** Wire key for speed priority. */
+  val SpeedPriorityKey: String = "speedPriority"
+
+  /** Wire key for intelligence priority. */
+  val IntelligencePriorityKey: String = "intelligencePriority"
+}
+
 /** Whether to attach MCP server context to the sampling prompt.
  *
  *  Default when absent is [[IncludeContextNone]]. Values other than none are
@@ -38,6 +59,18 @@ case class ModelPreferences(
  */
 sealed trait IncludeContext {
   def value: String
+}
+
+object IncludeContext {
+
+  /** Classify a wire `includeContext` string. */
+  def fromValue(value: String): Option[IncludeContext] =
+    value match {
+      case IncludeContextNone.value       => Some(IncludeContextNone)
+      case IncludeContextThisServer.value => Some(IncludeContextThisServer)
+      case IncludeContextAllServers.value => Some(IncludeContextAllServers)
+      case _                              => None
+    }
 }
 
 /** Do not include MCP server context (default). */
@@ -65,9 +98,34 @@ case class ToolChoice(
     mode: Option[ToolChoiceMode] = Some(ToolChoiceAuto)
 )
 
+object ToolChoice {
+
+  /** Wire key for tool-choice mode. */
+  val ModeKey: String = "mode"
+
+  /** Classify optional wire `mode` (absent → [[ToolChoiceAuto]]). */
+  def modeFromWire(mode: Option[String]): Option[ToolChoiceMode] =
+    mode match {
+      case None    => Some(ToolChoiceAuto)
+      case Some(s) => ToolChoiceMode.fromValue(s)
+    }
+}
+
 /** Tool-selection mode for [[ToolChoice]]. */
 sealed trait ToolChoiceMode {
   def value: String
+}
+
+object ToolChoiceMode {
+
+  /** Classify a wire tool-choice mode string. */
+  def fromValue(value: String): Option[ToolChoiceMode] =
+    value match {
+      case ToolChoiceAuto.value     => Some(ToolChoiceAuto)
+      case ToolChoiceRequired.value => Some(ToolChoiceRequired)
+      case ToolChoiceNone.value     => Some(ToolChoiceNone)
+      case _                        => None
+    }
 }
 
 /** Model decides whether to use tools (default). */

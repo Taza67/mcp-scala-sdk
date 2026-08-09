@@ -6,7 +6,7 @@
 
 ## Context and Problem Statement
 
-We are implementing protocol types from the MCP schema revision **2026-07-28** (captured locally as `SPECS.md`). That schema lists a large “Common Types” section alongside JSON-RPC envelopes and many method-specific shapes. Earlier ADRs already require a codec-neutral JSON AST (ADR-0003) and a split between JSON-RPC and MCP packages (ADR-0004). Open questions remained: which protocol era to target first, how to name types, where SPECS “Common” types live, and whether JSON-RPC `params` should allow arrays.
+We are implementing protocol types from the MCP schema revision **2026-07-28** (vendored locally; see [`SPECS.md`](../../SPECS.md)). That schema lists a large “Common Types” section alongside JSON-RPC envelopes and many method-specific shapes. Earlier ADRs already require a codec-neutral JSON AST (ADR-0003) and a split between JSON-RPC and MCP packages (ADR-0004). Open questions remained: which protocol era to target first, how to name types, where SPECS “Common” types live, and whether JSON-RPC `params` should allow arrays.
 
 How should we implement `SPECS.md` in the `protocol` module without fighting ADR-0003/0004 or dumping the entire schema at once?
 
@@ -74,7 +74,7 @@ This **amends** ADR-0004 on one point: JSON-RPC `params` are modeled as `Option[
 
 ## More Information
 
-* Source: `SPECS.md` (MCP schema reference for **2026-07-28**)
+* Source: [`SPECS.md`](../../SPECS.md) and [`docs/specs/2026-07-28/schema.ts`](../specs/2026-07-28/schema.ts) (MCP schema reference for **2026-07-28**)
 * Related: [ADR-0003](0003-protocol-json-ast-without-codec-dependency.md), [ADR-0004](0004-separate-jsonrpc-and-mcp-layers.md)
 * Amends: ADR-0004 (`params` typing: `JsonObject` instead of `JsonStructure`)
 * Suggested build order: (1) `json` AST (2) `jsonrpc` envelopes (3) `mcp` metas + `Result`/`resultType` (4) domain methods (`server/discover`, tools, …)

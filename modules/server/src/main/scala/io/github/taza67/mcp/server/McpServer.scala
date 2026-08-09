@@ -21,7 +21,7 @@ case class McpServer(handlerRegistry: HandlerRegistry) extends Server {
           case Left(e)  => McpErrorResponse(error = e, id = request.id)
           case Right(r) => McpSuccessResponse(result = r, id = request.id)
         }
-      case _ => McpErrorResponse(error = MethodNotFoundError(), id = request.id)
+      case None => McpErrorResponse(error = MethodNotFoundError(), id = request.id)
     }
   }
 }

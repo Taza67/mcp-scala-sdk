@@ -7,12 +7,15 @@ ThisBuild / scalacOptions ++= Seq(
   "-Wunused:implicits"
 )
 
+ThisBuild / testFrameworks += new TestFramework("munit.Framework")
+
 lazy val protocol = (project in file("modules/protocol"))
 
 lazy val codec = (project in file("modules/codec"))
   .dependsOn(protocol)
   .settings(
-    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
   )
 
 lazy val codecCirce = (project in file("modules/codec/circe"))
@@ -20,7 +23,8 @@ lazy val codecCirce = (project in file("modules/codec/circe"))
   .settings(
     libraryDependencies += "io.circe" %% "circe-core" % "0.14.14",
     libraryDependencies += "io.circe" %% "circe-parser" % "0.14.14",
-    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
   )
 
 lazy val codecZiojson = (project in file("modules/codec/ziojson"))
@@ -31,9 +35,10 @@ lazy val codecZiojson = (project in file("modules/codec/ziojson"))
   )
 
 lazy val server = (project in file("modules/server"))
-  .dependsOn(protocol)
+  .dependsOn(protocol, codec)
   .settings(
-    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
   )
 
 lazy val transportStdio = (project in file("modules/transport/stdio")).dependsOn(server)

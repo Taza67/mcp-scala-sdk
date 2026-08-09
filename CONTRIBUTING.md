@@ -1,10 +1,10 @@
 # Contributing
 
-Thank you for your interest in **mcp-scala-sdk**. This project targets the [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) specification with a shared protocol kernel and multiple frontend styles (see [ADR-0001](docs/decisions/0001-multi-frontend-mcp-scala-sdk-architecture.md)).
+Thank you for your interest in **mcp-scala-sdk**. The SDK implements the [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) specification with a shared protocol kernel and multiple frontend styles (see [ADR-0001](docs/decisions/0001-multi-frontend-mcp-scala-sdk-architecture.md)).
 
 ## Before you start
 
-- Search [existing issues](https://github.com/taza67/mcp-scala-sdk/issues) to avoid duplicate work.
+- Search [existing issues](https://github.com/Taza67/mcp-scala-sdk/issues) to avoid duplicate work.
 - For large or architectural changes, open an issue first or read the [architecture decision records](docs/decisions/).
 - New cross-cutting design choices should be captured as an ADR before or alongside the implementation.
 
@@ -18,7 +18,7 @@ Thank you for your interest in **mcp-scala-sdk**. This project targets the [MCP 
 ### Clone and test
 
 ```bash
-git clone https://github.com/taza67/mcp-scala-sdk.git
+git clone https://github.com/Taza67/mcp-scala-sdk.git
 cd mcp-scala-sdk
 sbt ';codec/test;server/test;codecCirce/test'
 ```
@@ -41,29 +41,11 @@ sbt scalafmtAll
 
 ## Commit messages
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-
-```text
-type: <imperative verb> <subject>
-
-- bullet describing a concrete change
-- another bullet if needed
-```
+Follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 - **Types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
-- **Summary:** lowercase, no trailing period, imperative mood (`add`, `fix`, `update`)
-- **Body:** optional bullet list; lowercase except proper nouns
-
-Example:
-
-```text
-feat: add list tools result AST codec
-
-- add fromListToolsResult and toListToolsResult in codec.tools
-- add round-trip tests in ToolsSuite
-```
-
-Do not add `Co-authored-by` trailers for automated tools.
+- **Description:** imperative mood, lowercase, no trailing period
+- **Body:** optional; blank line after the description, then `-` bullets — lowercase except proper nouns, imperative, no trailing period
 
 ## Code layout
 

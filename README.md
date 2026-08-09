@@ -1,11 +1,20 @@
 <a id="readme-top"></a>
 
+[![CI][ci-shield]][ci-url]
+[![License][license-shield]][license-url]
+[![Scala][scala-shield]][scala-url]
+
 <div align="center">
 
 <h3 align="center">mcp-scala-sdk</h3>
 
   <p align="center">
-    A Scala SDK for the <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> (MCP), with a shared protocol kernel and multiple frontend styles.
+    MCP for Scala — Cats, ZIO, or neither. A shared protocol kernel with frontend artifacts for building MCP servers and clients.
+    <br />
+    <br />
+    <a href="https://github.com/Taza67/mcp-scala-sdk/issues/new?labels=bug&template=bug_report.yml">Report Bug</a>
+    &middot;
+    <a href="https://github.com/Taza67/mcp-scala-sdk/issues/new?labels=enhancement&template=feature_request.yml">Request Feature</a>
   </p>
 </div>
 
@@ -18,36 +27,67 @@
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
     <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
   </ol>
 </details>
 
 ## About The Project
 
-`mcp-scala-sdk` is a Scala SDK for building MCP servers and clients. It uses one protocol implementation with multiple frontend artifacts so callers can choose pragmatic FP, Cats Effect, or ZIO, starting on Scala 2.13 (JVM) with Scala 3 faces planned later.
+`mcp-scala-sdk` is a Scala SDK for the [Model Context Protocol](https://modelcontextprotocol.io/). One protocol implementation ships with separate frontend artifacts so you can use pragmatic Scala, Cats Effect, or ZIO.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+The SDK implements the [2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) specification and will adopt new MCP releases as they ship.
 
 ### Built With
 
-* [Scala](https://www.scala-lang.org/)
+* [Scala](https://www.scala-lang.org/) 2.13
+* [sbt](https://www.scala-sbt.org/)
 * [Model Context Protocol](https://modelcontextprotocol.io/)
-* [Cats Effect](https://typelevel.org/cats-effect/)
-* [ZIO](https://zio.dev/)
+* [Circe](https://circe.github.io/circe/)
+* [MUnit](https://scalameta.org/munit/)
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<p align="right"><a href="#readme-top" title="Back to top">↑</a></p>
+
+## Getting Started
+
+### Prerequisites
+
+* JDK 17+
+* sbt 2.0.x
+
+### Installation
+
+```bash
+git clone https://github.com/Taza67/mcp-scala-sdk.git
+cd mcp-scala-sdk
+sbt ';codec/test;server/test;codecCirce/test'
+```
+
+<p align="right"><a href="#readme-top" title="Back to top">↑</a></p>
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before participating.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
+<p align="right"><a href="#readme-top" title="Back to top">↑</a></p>
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+## License
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+Distributed under the Apache License 2.0. See [LICENSE](LICENSE) for more information.
+
+<p align="right"><a href="#readme-top" title="Back to top">↑</a></p>
+
+<!-- MARKDOWN LINKS & IMAGES -->
+[ci-shield]: https://github.com/Taza67/mcp-scala-sdk/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/Taza67/mcp-scala-sdk/actions/workflows/ci.yml
+[license-shield]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
+[license-url]: https://github.com/Taza67/mcp-scala-sdk/blob/main/LICENSE
+[scala-shield]: https://img.shields.io/badge/Scala-2.13-red.svg?logo=scala&logoColor=white
+[scala-url]: https://www.scala-lang.org/

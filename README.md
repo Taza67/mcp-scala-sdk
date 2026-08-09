@@ -67,7 +67,7 @@ The SDK implements the [2026-07-28](https://modelcontextprotocol.io/specificatio
 ```bash
 git clone https://github.com/Taza67/mcp-scala-sdk.git
 cd mcp-scala-sdk
-sbt ';codec/test;server/test;codecCirce/test'
+sbt test
 ```
 
 <p align="right"><a href="#readme-top" title="Back to top">↑</a></p>

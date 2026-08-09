@@ -9,6 +9,8 @@ ThisBuild / scalacOptions ++= Seq(
 
 ThisBuild / testFrameworks += new TestFramework("munit.Framework")
 
+addCommandAlias("test", "root/test")
+
 lazy val protocol = (project in file("modules/protocol"))
 
 lazy val codec = (project in file("modules/codec"))
@@ -44,3 +46,9 @@ lazy val server = (project in file("modules/server"))
 lazy val transportStdio = (project in file("modules/transport/stdio")).dependsOn(server)
 
 lazy val transportHttp = (project in file("modules/transport/http")).dependsOn(server)
+
+lazy val root = (project in file("."))
+  .aggregate(protocol, codec, codecCirce, codecZiojson, server, transportStdio, transportHttp)
+  .settings(
+    publish / skip := true
+  )

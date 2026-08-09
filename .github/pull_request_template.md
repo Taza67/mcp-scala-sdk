@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] Tests pass locally (`sbt ';codec/test;server/test;codecCirce/test'`)
+- [ ] Tests pass locally (`sbt test`)
 - [ ] New behavior has tests where appropriate
 - [ ] Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (see [CONTRIBUTING.md](CONTRIBUTING.md))
 - [ ] Architectural changes include or reference an ADR in `docs/decisions/` when needed

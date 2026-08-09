@@ -20,7 +20,7 @@ Thank you for your interest in **mcp-scala-sdk**. The SDK implements the [MCP 20
 ```bash
 git clone https://github.com/Taza67/mcp-scala-sdk.git
 cd mcp-scala-sdk
-sbt ';codec/test;server/test;codecCirce/test'
+sbt test
 ```
 
 ### Formatting

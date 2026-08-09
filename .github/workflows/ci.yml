@@ -27,4 +27,4 @@ jobs:
         uses: sbt/setup-sbt@v1
 
       - name: Run tests
-        run: sbt ';codec/test;server/test;codecCirce/test'
+        run: sbt test

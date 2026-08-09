@@ -1,0 +1,46 @@
+name: Bug report
+description: Report incorrect behavior, a crash, or a spec compliance issue
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include enough detail to reproduce the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, code snippet, or test case if possible.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: Git commit SHA, branch, or tag if known.
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, JDK, sbt version, Scala version.
+      placeholder: e.g. Linux, JDK 17, sbt 2.0.3, Scala 2.13.16
+    validations:
+      required: false

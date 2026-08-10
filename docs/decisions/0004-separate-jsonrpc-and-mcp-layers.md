@@ -32,7 +32,7 @@ This decision is reflected in commit `6854927` (`refactor: separate JSON-RPC and
 
 ### Consequences
 
-* Good, because JSON-RPC `Request` / `Notification` / `Response` stay free of MCP `_meta` and use `JsonStructure` for `params` (object or array only).
+* Good, because JSON-RPC `Request` / `Notification` / `Response` stay free of MCP `_meta` and use `JsonObject` for `params` (ADR-0005 supersedes the earlier `JsonStructure` sketch in this ADR).
 * Good, because MCP exposes `McpRequest` / `McpNotification` / `McpResponse` (and related params/result/meta) as ADTs without pretending to own wire assembly.
 * Good, because the shared JSON AST lives under `protocol.json` and serves both layers (ADR-0003).
 * Bad, because callers must import the right package and map between MCP and JSON-RPC when encoding.
@@ -43,7 +43,7 @@ This decision is reflected in commit `6854927` (`refactor: separate JSON-RPC and
 * `io.github.taza67.mcp.protocol.jsonrpc` types do not reference MCP meta, protocol version, or capabilities.
 * MCP message types live under `io.github.taza67.mcp.protocol.mcp` and depend on `jsonrpc` / `json`, not the reverse.
 * Server runtime handles `McpRequest` / `McpResponse`, not bare JSON-RPC envelopes.
-* JSON-RPC `params` is `Option[JsonStructure]` (`JsonObject` | `JsonArray`), not arbitrary `JsonValue`.
+* JSON-RPC `params` is `Option[JsonObject]` for MCP requests (object-shaped params only; see ADR-0005), not arbitrary `JsonValue`.
 
 ## Pros and Cons of the Options
 
@@ -71,5 +71,6 @@ This decision is reflected in commit `6854927` (`refactor: separate JSON-RPC and
 
 * Related: [ADR-0001](0001-multi-frontend-mcp-scala-sdk-architecture.md) (shared protocol kernel)
 * Related: [ADR-0003](0003-protocol-json-ast-without-codec-dependency.md) (JSON AST placement)
+* Related: [ADR-0005](0005-protocol-modeling-from-mcp-2026-07-28-specs.md) — supersedes the `JsonStructure` wording below for MCP request `params` (`JsonObject` only via ADR-0007)
 * Evidence: `modules/protocol/.../json|jsonrpc|mcp/`; commit `6854927`
 * Revisit when adding codec modules or if JSON-RPC types are reused outside MCP (then consider a dedicated `protocol-jsonrpc` artifact)

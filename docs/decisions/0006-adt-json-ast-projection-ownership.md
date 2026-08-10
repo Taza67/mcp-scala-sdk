@@ -93,3 +93,7 @@ This decision **clarifies** ADR-0003’s “codecs live outside protocol”: “
 * Related: [ADR-0005](0005-protocol-modeling-from-mcp-2026-07-28-specs.md) (layer build order)
 * Evidence in tree: `Error.classify` in `protocol.jsonrpc`; `codec.jsonrpc.Messages` for envelopes; Circe `JsonCodec` / `JsonRpcCodec` as String façades
 * Revisit if a supported product use case requires ADT↔AST with a `protocol`-only dependency, or if `modules/codec` should be renamed/published as a dedicated `mcp-schema` / `mcp-ast` artifact for clarity
+
+### Deferred codec domains (current cut)
+
+Protocol types for **notifications**, **subscriptions**, and **completion** live under `protocol.mcp` but have no `codec.mcp` twin packages yet. That gap is intentional (YAGNI): the server runtime and first codec pass do not need wire projection for those domains. `codec.mcp.Messages` documents the omission; add aligned `codec.mcp` packages when transport or server work requires them — do not leave silent gaps.

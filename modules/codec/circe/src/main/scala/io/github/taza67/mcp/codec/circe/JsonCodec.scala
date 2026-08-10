@@ -37,21 +37,30 @@ object JsonCodec {
       toCirce(value).noSpaces
   }
 
-  private def fromCirce(v: CirceJson): JsonValue =
-    v.fold(
-      JsonNull,
-      b => JsonBool(b),
-      n => JsonNumber(n.toBigDecimal.getOrElse(BigDecimal(n.toString))),
-      s => JsonString(s),
-      a => JsonArray(a.map(fromCirce).toList),
-      o => JsonObject(o.toMap.transform { case (_, value) => fromCirce(value) })
-    )
+  private def fromCirce(v: CirceJson): Either[DecodingError, JsonValue] =
+    if (v.isNull) Right(JsonNull)
+    else if (v.isBoolean) Right(JsonBool(v.asBoolean.get))
+    else if (v.isNumber)
+      v.asNumber.get.toBigDecimal
+        .toRight(DecodingError(s"Invalid JSON number: ${v.asNumber.get}"))
+        .map(JsonNumber(_))
+    else if (v.isString) Right(JsonString(v.asString.get))
+    else if (v.isArray) v.asArray.get.foldLeft[Either[DecodingError, List[JsonValue]]](Right(Nil)) {
+      case (Right(acc), elem) => fromCirce(elem).map(_ :: acc)
+      case (left, _)          => left
+    }.map(entries => JsonArray(entries.reverse))
+    else
+      v.asObject.get.toMap.foldLeft[Either[DecodingError, Map[String, JsonValue]]](Right(Map.empty)) {
+        case (Right(acc), (key, value)) =>
+          fromCirce(value).map(decoded => acc + (key -> decoded))
+        case (left, _) => left
+      }.map(entries => JsonObject(entries))
 
   implicit object JsonValueDecoder extends CodecDecoder[JsonValue] {
     def decode(value: String): Either[DecodingError, JsonValue] =
       circeParse(value) match {
         case Left(e)  => Left(DecodingError(e.message))
-        case Right(j) => Right(fromCirce(j))
+        case Right(j) => fromCirce(j)
       }
   }
 }

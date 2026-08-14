@@ -43,12 +43,35 @@ lazy val server = (project in file("modules/server"))
     Test / test := (Test / testFull).value
   )
 
-lazy val transportStdio = (project in file("modules/transport/stdio")).dependsOn(server)
+lazy val transportStdio = (project in file("modules/transport/stdio"))
+  .dependsOn(server, codecCirce)
+  .settings(
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
+  )
+
+lazy val exampleStdio = (project in file("examples/stdio"))
+  .dependsOn(transportStdio)
+  .settings(
+    publish / skip := true,
+    Compile / mainClass := Some("io.github.taza67.mcp.examples.stdio.Main"),
+    run / fork := true,
+    run / connectInput := true
+  )
 
 lazy val transportHttp = (project in file("modules/transport/http")).dependsOn(server)
 
 lazy val root = (project in file("."))
-  .aggregate(protocol, codec, codecCirce, codecZiojson, server, transportStdio, transportHttp)
+  .aggregate(
+    protocol,
+    codec,
+    codecCirce,
+    codecZiojson,
+    server,
+    transportStdio,
+    transportHttp,
+    exampleStdio
+  )
   .settings(
     publish / skip := true
   )

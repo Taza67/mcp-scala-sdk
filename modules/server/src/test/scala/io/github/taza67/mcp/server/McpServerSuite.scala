@@ -9,20 +9,29 @@ import io.github.taza67.mcp.codec.mcp.tools.Tools
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.jsonrpc.{Method, MethodNotFoundError, StringRequestId}
+import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
+import io.github.taza67.mcp.protocol.jsonrpc.Error
+import io.github.taza67.mcp.protocol.jsonrpc.InternalError
 import io.github.taza67.mcp.protocol.jsonrpc.InvalidParamsError
 import io.github.taza67.mcp.protocol.mcp.AssistantRole
 import io.github.taza67.mcp.protocol.mcp.ClientCapabilities
 import io.github.taza67.mcp.protocol.mcp.CompleteResultType
+import io.github.taza67.mcp.protocol.mcp.Cursor
 import io.github.taza67.mcp.protocol.mcp.Implementation
+import io.github.taza67.mcp.protocol.mcp.InputResponses
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
 import io.github.taza67.mcp.protocol.mcp.McpProtocolVersion20260728
 import io.github.taza67.mcp.protocol.mcp.McpRequest
+import io.github.taza67.mcp.protocol.mcp.McpResponse
 import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
+import io.github.taza67.mcp.protocol.mcp.MetaObject
+import io.github.taza67.mcp.protocol.mcp.PaginatedRequestParams
 import io.github.taza67.mcp.protocol.mcp.PrivateCacheScope
 import io.github.taza67.mcp.protocol.mcp.PublicCacheScope
 import io.github.taza67.mcp.protocol.mcp.RequestMeta
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.Result
+import io.github.taza67.mcp.protocol.mcp.ResultMeta
 import io.github.taza67.mcp.protocol.mcp.ServerCapabilities
 import io.github.taza67.mcp.protocol.mcp.TextContent
 import io.github.taza67.mcp.protocol.mcp.TextResourceContents
@@ -298,6 +307,77 @@ class McpServerSuite extends FunSuite {
     }
   }
 
+  test("tools does not reflect an unknown tool name in the error") {
+    var ran = false
+    val handlerRegistry = HandlerRegistryInMemory(
+      Map(
+        ToolMethods.call -> Handler.tools(
+          "ping" -> ((_: ToolCall) => {
+            ran = true
+            Right(CallToolResult(content = List(TextContent(text = "pong"))))
+          })
+        )
+      )
+    )
+    val mcpServer = McpServer(handlerRegistry)
+    val secretName = "secret-tool\nname"
+    val response = mcpServer.handle(callRequest(secretName))
+
+    assertEquals(ran, false)
+    response match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[InvalidParamsError])
+        assert(!error.error.message.contains("secret-tool"))
+        assertEquals(error.error.data, None)
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
+  test("tools does not reflect malformed params contents in the error") {
+    var ran = false
+    val handlerRegistry = HandlerRegistryInMemory(
+      Map(
+        ToolMethods.call -> Handler.tools(
+          "ping" -> ((_: ToolCall) => {
+            ran = true
+            Right(CallToolResult(content = List(TextContent(text = "pong"))))
+          })
+        )
+      )
+    )
+    val mcpServer = McpServer(handlerRegistry)
+    val request = McpRequest(
+      method = ToolMethods.call,
+      id = requestId,
+      params = Some(
+        RequestParams(
+          meta = requestMeta,
+          fields = JsonObject(
+            Map(
+              CallToolRequestParams.NameKey -> JsonString("ping"),
+              InputResponses.InputResponsesKey -> JsonObject(
+                Map("private-input-key\nsecret" -> JsonString("not-an-object"))
+              )
+            )
+          )
+        )
+      )
+    )
+    val response = mcpServer.handle(request)
+
+    assertEquals(ran, false)
+    response match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[InvalidParamsError])
+        assert(!error.error.message.contains("private-input-key"))
+        assert(!error.error.message.contains("not-an-object"))
+        assertEquals(error.error.data, None)
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
   test("ReadResource handler encodes through Results.readResource") {
     val expected = ReadResourceResult(
       contents = List(TextResourceContents(uri = "file:///tmp/a.txt", text = "hello")),
@@ -393,8 +473,16 @@ class McpServerSuite extends FunSuite {
         )
       )
     )
-    val list = McpRequest(method = ToolMethods.list, id = requestId)
-    val discover = McpRequest(method = ServerDiscover.method, id = requestId)
+    val list = McpRequest(
+      method = ToolMethods.list,
+      id = requestId,
+      params = Some(PaginatedRequestParams(meta = meta))
+    )
+    val discover = McpRequest(
+      method = ServerDiscover.method,
+      id = requestId,
+      params = Some(RequestParams(meta = meta))
+    )
 
     server.handle(list) match {
       case success: McpSuccessResponse =>
@@ -426,6 +514,252 @@ class McpServerSuite extends FunSuite {
     val tool = ServerTool(definition, _ => Right(CallToolResult(content = Nil)))
     intercept[IllegalArgumentException] {
       McpServer(info = Implementation(name = "ex", version = "1"), tools = Seq(tool, tool))
+    }
+  }
+
+  private val requestMeta = RequestMeta(
+    protocolVersion = McpProtocolVersion20260728,
+    clientCapabilities = ClientCapabilities()
+  )
+
+  private def callRequest(name: String): McpRequest =
+    McpRequest(
+      method = ToolMethods.call,
+      id = requestId,
+      params = Some(
+        RequestParams(
+          meta = requestMeta,
+          fields = JsonObject(Map(CallToolRequestParams.NameKey -> JsonString(name)))
+        )
+      )
+    )
+
+  private def assertInvalidParams(response: McpResponse): Unit =
+    response match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[InvalidParamsError])
+        assertEquals(error.id, Some(requestId))
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+
+  test("NonFatal handler failure returns InternalError and the server recovers") {
+    var calls = 0
+    val ping = Method("ping")
+    val handlerRegistry = HandlerRegistryInMemory(
+      Map(
+        ping -> Handler.empty { _ =>
+          calls += 1
+          if (calls == 1) throw new RuntimeException("sensitive internals")
+          else Right(())
+        }
+      )
+    )
+    val mcpServer = McpServer(handlerRegistry)
+    val request = McpRequest(method = ping, id = requestId)
+
+    mcpServer.handle(request) match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[InternalError])
+        assertEquals(error.error.message, "Internal error")
+        assertEquals(error.error.data, None)
+        assertEquals(error.id, Some(requestId))
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+    assertEquals(
+      mcpServer.handle(request),
+      McpSuccessResponse(result = Result.empty(), id = request.id)
+    )
+  }
+
+  test("Registry lookup failure returns InternalError") {
+    val failingRegistry = new HandlerRegistry {
+      def find(method: Method): Option[Handler] =
+        throw new RuntimeException("registry internals")
+    }
+    val mcpServer = McpServer(failingRegistry)
+    mcpServer.handle(McpRequest(method = Method("ping"), id = requestId)) match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[InternalError])
+        assertEquals(error.error.data, None)
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
+  test("Result encoding failure returns InternalError") {
+    val failingEncoder: ResultEncoder[Unit] =
+      ResultEncoder(_ => throw new RuntimeException("encoder internals"))
+    val handlerRegistry = HandlerRegistryInMemory(
+      Map(Method("ping") -> Handler.of(_ => Right(()))(failingEncoder))
+    )
+    val mcpServer = McpServer(handlerRegistry)
+    mcpServer.handle(McpRequest(method = Method("ping"), id = requestId)) match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[InternalError])
+        assertEquals(error.error.data, None)
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
+  test("InterruptedException and LinkageError propagate") {
+    val interrupted = McpServer(
+      HandlerRegistryInMemory(
+        Map(Method("ping") -> Handler.empty(_ => throw new InterruptedException("stop")))
+      )
+    )
+    val request = McpRequest(method = Method("ping"), id = requestId)
+    var sawInterrupt = false
+    try interrupted.handle(request)
+    catch { case _: InterruptedException => sawInterrupt = true }
+    assert(sawInterrupt)
+
+    val linkage = McpServer(
+      HandlerRegistryInMemory(
+        Map(Method("ping") -> Handler.empty(_ => throw new LinkageError("bad link")))
+      )
+    )
+    var sawLinkage = false
+    try linkage.handle(request)
+    catch { case _: LinkageError => sawLinkage = true }
+    assert(sawLinkage)
+  }
+
+  test("Intentional handler error is preserved unchanged") {
+    val domainError = ApplicationError(code = 42, message = "domain says no")
+    val handlerRegistry = HandlerRegistryInMemory(
+      Map(Method("ping") -> Handler.empty(_ => Left(domainError)))
+    )
+    val mcpServer = McpServer(handlerRegistry)
+    val request = McpRequest(method = Method("ping"), id = requestId)
+    assertEquals(
+      mcpServer.handle(request),
+      McpErrorResponse(error = domainError, id = request.id)
+    )
+  }
+
+  test("Factory discover and tools/list validate request params") {
+    val tool = ServerTool(
+      Tool(name = "ping", inputSchema = ToolInputSchema()),
+      _ => Right(CallToolResult(content = List(TextContent(text = "pong"))))
+    )
+    val server = McpServer(info = Implementation(name = "ex", version = "1"), tools = Seq(tool))
+
+    assertInvalidParams(server.handle(McpRequest(method = ServerDiscover.method, id = requestId)))
+    assertInvalidParams(
+      server.handle(
+        McpRequest(
+          method = ServerDiscover.method,
+          id = requestId,
+          params = Some(PaginatedRequestParams(meta = requestMeta))
+        )
+      )
+    )
+    assertInvalidParams(server.handle(McpRequest(method = ToolMethods.list, id = requestId)))
+    assertInvalidParams(
+      server.handle(
+        McpRequest(
+          method = ToolMethods.list,
+          id = requestId,
+          params = Some(RequestParams(meta = requestMeta))
+        )
+      )
+    )
+    assertInvalidParams(
+      server.handle(
+        McpRequest(
+          method = ToolMethods.list,
+          id = requestId,
+          params = Some(PaginatedRequestParams(meta = requestMeta, cursor = Some(Cursor("abc"))))
+        )
+      )
+    )
+  }
+
+  test("Factory without tools advertises discovery only") {
+    val server = McpServer(info = Implementation(name = "ex", version = "1"))
+
+    server.handle(
+      McpRequest(
+        method = ServerDiscover.method,
+        id = requestId,
+        params = Some(RequestParams(meta = requestMeta))
+      )
+    ) match {
+      case success: McpSuccessResponse =>
+        val result = Discover.toDiscoverResult(success.result.fields)
+        assert(result.exists(_.capabilities.tools.isEmpty))
+      case other =>
+        fail(s"expected discover success, got $other")
+    }
+    server.handle(
+      McpRequest(
+        method = ToolMethods.list,
+        id = requestId,
+        params = Some(PaginatedRequestParams(meta = requestMeta))
+      )
+    ) match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[MethodNotFoundError])
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+    server.handle(callRequest("ping")) match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[MethodNotFoundError])
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
+  test("Blank and duplicate tool names fail fast in factory and Handler.tools") {
+    val run: ToolCall => Either[Error, CallToolResult] =
+      _ => Right(CallToolResult(content = Nil))
+    intercept[IllegalArgumentException](Handler.tools("" -> run))
+    intercept[IllegalArgumentException](Handler.tools("   " -> run))
+    intercept[IllegalArgumentException](Handler.tools("a" -> run, "a" -> run))
+    val blankTool = ServerTool(Tool(name = " ", inputSchema = ToolInputSchema()), run)
+    intercept[IllegalArgumentException](
+      McpServer(info = Implementation(name = "ex", version = "1"), tools = Seq(blankTool))
+    )
+  }
+
+  test("Tool result metadata extensions keep the default server identity") {
+    val extension = MetaObject(Map("trace" -> JsonString("abc")))
+    val tool = ServerTool(
+      Tool(name = "ping", inputSchema = ToolInputSchema()),
+      _ => Right(CallToolResult(content = Nil, meta = Some(ResultMeta(extensions = extension))))
+    )
+    val info = Implementation(name = "ex", version = "1")
+    val server = McpServer(info = info, tools = Seq(tool))
+
+    server.handle(callRequest("ping")) match {
+      case success: McpSuccessResponse =>
+        val meta = success.result.meta.getOrElse(fail("missing result meta"))
+        assertEquals(meta.serverInfo, Some(info))
+        assertEquals(meta.extensions, extension)
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+  }
+
+  test("Explicit serverInfo in tool result metadata is preserved") {
+    val custom = Implementation(name = "custom", version = "9")
+    val tool = ServerTool(
+      Tool(name = "ping", inputSchema = ToolInputSchema()),
+      _ => Right(
+        CallToolResult(content = Nil, meta = Some(ResultMeta(serverInfo = Some(custom))))
+      )
+    )
+    val server = McpServer(info = Implementation(name = "ex", version = "1"), tools = Seq(tool))
+
+    server.handle(callRequest("ping")) match {
+      case success: McpSuccessResponse =>
+        assertEquals(success.result.meta.flatMap(_.serverInfo), Some(custom))
+      case other =>
+        fail(s"expected success response, got $other")
     }
   }
 }

@@ -28,7 +28,11 @@ object Handler {
   def empty(execute: Option[McpRequestParams] => Either[Error, Unit]): Handler =
     of(execute)
 
-  /** Decodes `tools/call` params, then runs the domain handler. */
+  /** Decodes `tools/call` params, then runs the domain handler.
+   *
+   *  Decode and lookup failures answer a generic [[InvalidParamsError]]: raw
+   *  decoder details and tool names never reach the wire.
+   */
   def callTool(
       execute: CallToolRequestParams => Either[Error, CallToolResult]
   ): Handler =
@@ -36,7 +40,7 @@ object Handler {
       parameters match {
         case Some(plain: RequestParams) =>
           ToolsCodec.toCallToolRequestParams(plain) match {
-            case Left(error) => Left(InvalidParamsError(message = error.message))
+            case Left(_)     => Left(InvalidParamsError())
             case Right(call) => execute(call)
           }
         case _ =>
@@ -44,16 +48,23 @@ object Handler {
       }
     }(Results.callToolResultEncoder)
 
-  /** Routes `tools/call` by tool name, then runs that tool with a [[ToolCall]]. */
+  /** Routes `tools/call` by tool name, then runs that tool with a [[ToolCall]].
+   *
+   *  Fails fast on blank or duplicate tool names; this helper owns the
+   *  name-uniqueness invariant for `tools/call` routing.
+   */
   def tools(
       handlers: (String, ToolCall => Either[Error, CallToolResult])*
   ): Handler = {
+    val names = handlers.map(_._1)
+    require(names.forall(name => !name.isBlank), "blank tool name")
+    require(names.distinct.size == names.size, "duplicate tool names")
     val byName = handlers.toMap
     callTool { call =>
       byName.get(call.name) match {
         case Some(run) => run(ToolCall.from(call))
         case None =>
-          Left(InvalidParamsError(message = s"unknown tool: ${call.name}"))
+          Left(InvalidParamsError(message = "unknown tool"))
       }
     }
   }

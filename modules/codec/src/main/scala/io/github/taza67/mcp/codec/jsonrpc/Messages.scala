@@ -2,6 +2,7 @@ package io.github.taza67.mcp.codec.jsonrpc
 
 import io.github.taza67.mcp.codec.DecodingError
 import io.github.taza67.mcp.codec.Fields
+import io.github.taza67.mcp.protocol.json.JsonNull
 import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
@@ -11,6 +12,7 @@ import io.github.taza67.mcp.protocol.jsonrpc.ErrorResponse
 import io.github.taza67.mcp.protocol.jsonrpc.Message
 import io.github.taza67.mcp.protocol.jsonrpc.Notification
 import io.github.taza67.mcp.protocol.jsonrpc.Request
+import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 import io.github.taza67.mcp.protocol.jsonrpc.SuccessResponse
 
 
@@ -53,14 +55,18 @@ object Messages {
     JsonObject(Fields.withOptional(base, Error.DataKey -> error.data))
   }
 
-  private def fromErrorResponse(errorResponse: ErrorResponse): JsonObject =
+  private def fromErrorResponse(errorResponse: ErrorResponse): JsonObject = {
+    val base = Map(
+      Message.ErrorKey -> fromError(errorResponse.error),
+      Message.JsonRpcKey -> Primitives.fromJsonRpcVersion(errorResponse.jsonrpc)
+    )
     JsonObject(
-      Map(
-        Message.ErrorKey -> fromError(errorResponse.error),
-        Message.IdKey -> Primitives.fromRequestId(errorResponse.id),
-        Message.JsonRpcKey -> Primitives.fromJsonRpcVersion(errorResponse.jsonrpc)
+      Fields.withOptional(
+        base,
+        Message.IdKey -> errorResponse.id.map(Primitives.fromRequestId)
       )
     )
+  }
 
   def fromMessage(message: Message): JsonObject =
     message match {
@@ -107,12 +113,23 @@ object Messages {
     } yield Error.classify(code, message, data)
   }
 
+  /** Optional error-response id: absent or explicit `null` decodes to `None`
+   *  (uncorrelated error). Any other present value must be a valid [[RequestId]].
+   */
+  private def toOptionalRequestId(
+      fields: Map[String, JsonValue]
+  ): Either[DecodingError, Option[RequestId]] =
+    fields.get(Message.IdKey) match {
+      case None | Some(JsonNull) => Right(None)
+      case Some(value)           => Primitives.toRequestId(value).map(Some(_))
+    }
+
   def toErrorResponse(errorResponse: JsonObject): Either[DecodingError, ErrorResponse] = {
     val fields = errorResponse.value
     for {
       errorObject <- Fields.requiredObject(fields, Message.ErrorKey)
       error <- toError(errorObject)
-      id <- Fields.required(fields, Message.IdKey).flatMap(Primitives.toRequestId)
+      id <- toOptionalRequestId(fields)
       jsonrpc <- Fields.required(fields, Message.JsonRpcKey).flatMap(Primitives.toJsonRpcVersion)
     } yield ErrorResponse(error, id, jsonrpc)
   }

@@ -2,10 +2,13 @@ package io.github.taza67.mcp.codec.mcp
 
 import io.github.taza67.mcp.codec.CodecAssertions
 import io.github.taza67.mcp.codec.TestSupport
+import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
+import io.github.taza67.mcp.protocol.jsonrpc.ErrorCode
 import io.github.taza67.mcp.protocol.jsonrpc.Method
+import io.github.taza67.mcp.protocol.jsonrpc.ParseError
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
 import io.github.taza67.mcp.protocol.mcp.CompleteResultType
 import io.github.taza67.mcp.protocol.mcp.Cursor
@@ -123,5 +126,54 @@ class MessagesSuite extends FunSuite with CodecAssertions {
         id = StringRequestId("1")
       )
     )(Messages.fromMessage, Messages.toMessage)
+  }
+
+  test("McpErrorResponse decodes omitted id and re-encodes without id") {
+    val error = JsonObject(
+      Map(
+        "code" -> JsonNumber(ErrorCode.ParseError),
+        "message" -> JsonString("bad json")
+      )
+    )
+    val raw = JsonObject(
+      Map(
+        "jsonrpc" -> JsonString("2.0"),
+        "error" -> error
+      )
+    )
+    assertEquals(Messages.toMessage(raw).map(Messages.fromMessage), Right(raw))
+  }
+
+  test("Uncorrelated McpErrorResponse round-trips with omitted id") {
+    val response: McpMessage = McpErrorResponse(
+      error = ParseError(message = "bad json", data = None)
+    )
+    assertRoundTrip[McpMessage, JsonObject](response)(Messages.fromMessage, Messages.toMessage)
+    assert(!Messages.fromMessage(response).value.contains("id"))
+  }
+
+  test("McpErrorResponse preserves correlated string and number ids") {
+    val error = JsonObject(
+      Map(
+        "code" -> JsonNumber(ErrorCode.ParseError),
+        "message" -> JsonString("bad json")
+      )
+    )
+    val stringId = JsonObject(
+      Map(
+        "jsonrpc" -> JsonString("2.0"),
+        "error" -> error,
+        "id" -> JsonString("x")
+      )
+    )
+    val numberId = JsonObject(
+      Map(
+        "jsonrpc" -> JsonString("2.0"),
+        "error" -> error,
+        "id" -> JsonNumber(7)
+      )
+    )
+    assertEquals(Messages.toMessage(stringId).map(Messages.fromMessage), Right(stringId))
+    assertEquals(Messages.toMessage(numberId).map(Messages.fromMessage), Right(numberId))
   }
 }

@@ -6,6 +6,7 @@ import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
 import io.github.taza67.mcp.protocol.jsonrpc.Method
+import io.github.taza67.mcp.protocol.jsonrpc.ParseError
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
 import io.github.taza67.mcp.protocol.mcp.CompleteResultType
 import io.github.taza67.mcp.protocol.mcp.Cursor
@@ -103,5 +104,32 @@ class McpCodecSuite extends FunSuite with CodecAssertions {
         id = StringRequestId("1")
       )
     )(McpCodec.MessageEncoder.encode, McpCodec.MessageDecoder.decode)
+  }
+
+  test("Uncorrelated McpErrorResponse encodes to wire text without id") {
+    val response: McpMessage = McpErrorResponse(
+      error = ParseError(message = "bad json", data = None)
+    )
+    val encoded = McpCodec.MessageEncoder.encode(response)
+    assert(!encoded.contains("\"id\":"))
+    assertEquals(McpCodec.MessageDecoder.decode(encoded), Right(response))
+  }
+
+  test("McpErrorResponse decodes wire text without id and re-encodes without id") {
+    val raw = """{"jsonrpc":"2.0","error":{"code":-32700,"message":"bad json"}}"""
+    val decoded = McpCodec.MessageDecoder.decode(raw)
+    assert(decoded.isRight)
+    decoded.foreach { message =>
+      assert(!McpCodec.MessageEncoder.encode(message).contains("\"id\":"))
+    }
+  }
+
+  test("McpErrorResponse decodes wire text with null id as uncorrelated") {
+    val raw = """{"jsonrpc":"2.0","error":{"code":-32700,"message":"bad json"},"id":null}"""
+    val decoded = McpCodec.MessageDecoder.decode(raw)
+    assert(decoded.isRight)
+    decoded.foreach { message =>
+      assert(!McpCodec.MessageEncoder.encode(message).contains("\"id\":"))
+    }
   }
 }

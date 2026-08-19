@@ -80,9 +80,7 @@ case class Notification(
 ) extends Message
 
 /** A response to a [[Request]], containing either a result or an error. */
-sealed trait Response extends Message {
-  def id: RequestId
-}
+sealed trait Response extends Message
 
 /** Successful (non-error) response to a request.
  *
@@ -98,10 +96,23 @@ case class SuccessResponse(
 /** Response indicating that an error occurred while handling the request.
  *
  *  @param error Error object describing the failure.
- *  @param id Same id as the corresponding request (when known).
+ *  @param id Same id as the corresponding request when the error is correlated;
+ *            `None` for uncorrelated errors (e.g. a [[ParseError]] raised before
+ *            an id could be read), which encode with the `id` member omitted.
  */
 case class ErrorResponse(
     error: Error,
-    id: RequestId,
+    id: Option[RequestId] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends Response
+
+object ErrorResponse {
+
+  /** Correlated error response carrying the corresponding request's id. */
+  def apply(error: Error, id: RequestId): ErrorResponse =
+    ErrorResponse(error, Some(id))
+
+  /** Correlated error response with an explicit protocol version. */
+  def apply(error: Error, id: RequestId, jsonrpc: JsonRpcVersion): ErrorResponse =
+    ErrorResponse(error, Some(id), jsonrpc)
+}

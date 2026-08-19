@@ -156,9 +156,7 @@ case class McpNotification(
 ) extends McpMessage
 
 /** MCP response to an [[McpRequest]] (success or error). */
-sealed trait McpResponse extends McpMessage {
-  def id: RequestId
-}
+sealed trait McpResponse extends McpMessage
 
 /** Successful MCP response carrying a [[Result]]. */
 case class McpSuccessResponse(
@@ -167,9 +165,26 @@ case class McpSuccessResponse(
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends McpResponse
 
-/** MCP error response carrying a JSON-RPC [[Error]]. */
+/** MCP error response carrying a JSON-RPC [[Error]].
+ *
+ *  @param error Error object describing the failure.
+ *  @param id Same id as the corresponding request when the error is correlated;
+ *            `None` for uncorrelated errors (e.g. a parse failure before an id
+ *            could be read), which encode with the `id` member omitted.
+ */
 case class McpErrorResponse(
     error: Error,
-    id: RequestId,
+    id: Option[RequestId] = None,
     jsonrpc: JsonRpcVersion = JsonRpcVersion20
 ) extends McpResponse
+
+object McpErrorResponse {
+
+  /** Correlated error response carrying the corresponding request's id. */
+  def apply(error: Error, id: RequestId): McpErrorResponse =
+    McpErrorResponse(error, Some(id))
+
+  /** Correlated error response with an explicit protocol version. */
+  def apply(error: Error, id: RequestId, jsonrpc: JsonRpcVersion): McpErrorResponse =
+    McpErrorResponse(error, Some(id), jsonrpc)
+}

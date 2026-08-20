@@ -8,7 +8,6 @@ import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.jsonrpc.ErrorCode
-import io.github.taza67.mcp.protocol.jsonrpc.ErrorResponse
 import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.NumberRequestId
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
@@ -16,7 +15,6 @@ import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
 import io.github.taza67.mcp.protocol.jsonrpc.UnsupportedProtocolVersionError
 import io.github.taza67.mcp.protocol.mcp.ClientCapabilities
 import io.github.taza67.mcp.protocol.mcp.McpProtocolVersion20260728
-import io.github.taza67.mcp.protocol.mcp.McpRequest
 import io.github.taza67.mcp.protocol.mcp.PaginatedRequestParams
 import io.github.taza67.mcp.protocol.mcp.RequestMeta
 import io.github.taza67.mcp.protocol.mcp.RequestParams

@@ -12,19 +12,25 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: sbt
-
       - name: Setup sbt
         uses: sbt/setup-sbt@v1
-
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Run tests
         run: sbt test
+      - name: Stage stdio example
+        run: sbt exampleStdio/stage
+      - name: Test stdio process
+        run: python3 -B scripts/test_stdio.py --launcher target/stdio-example/bin/mcp-stdio-example

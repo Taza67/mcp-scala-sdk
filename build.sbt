@@ -106,9 +106,11 @@ lazy val exampleStdio = (project in file("examples/stdio"))
     stage := Def.uncached {
       def file(ref: xsbti.HashedVirtualFileRef): File =
         fileConverter.value.toPath(ref).toFile
-      StdioDistribution.stage(
-        destination =
-          (LocalRootProject / baseDirectory).value / "target" / "stdio-example",
+      val projectRoot = (LocalRootProject / baseDirectory).value
+      val license = projectRoot / "LICENSE"
+      require(license.isFile, "stage requires repository LICENSE")
+      val staged = StdioDistribution.stage(
+        destination = projectRoot / "target" / "stdio-example",
         jars = Seq(
           file((protocol / Compile / packageBin).value),
           file((codec / Compile / packageBin).value),
@@ -124,6 +126,8 @@ lazy val exampleStdio = (project in file("examples/stdio"))
         version = version.value,
         log = streams.value.log
       )
+      IO.copyFile(license, staged / "LICENSE")
+      staged
     }
   )
 

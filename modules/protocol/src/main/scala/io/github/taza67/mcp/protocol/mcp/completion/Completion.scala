@@ -13,12 +13,30 @@ sealed trait CompletionReference {
   def referenceType: String
 }
 
+object CompletionReference {
+
+  /** Wire key for the reference discriminator. */
+  val TypeKey: String = "type"
+}
+
 /** Identifies a prompt for completion. */
 case class PromptReference(
     name: String,
     title: Option[String] = None
 ) extends CompletionReference {
-  val referenceType: String = "ref/prompt"
+  val referenceType: String = PromptReference.TypeValue
+}
+
+object PromptReference {
+
+  /** Wire key for the prompt name. */
+  val NameKey: String = "name"
+
+  /** Wire key for the optional prompt title. */
+  val TitleKey: String = "title"
+
+  /** Wire discriminator value for prompt references. */
+  val TypeValue: String = "ref/prompt"
 }
 
 /** Reference to a resource or resource-template definition for completion.
@@ -28,7 +46,16 @@ case class PromptReference(
 case class ResourceTemplateReference(
     uri: String
 ) extends CompletionReference {
-  val referenceType: String = "ref/resource"
+  val referenceType: String = ResourceTemplateReference.TypeValue
+}
+
+object ResourceTemplateReference {
+
+  /** Wire key for the resource or resource-template URI. */
+  val UriKey: String = "uri"
+
+  /** Wire discriminator value for resource-template references. */
+  val TypeValue: String = "ref/resource"
 }
 
 /** Argument currently being completed.

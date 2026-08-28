@@ -68,6 +68,15 @@ case class CompletionArgument(
     value: String
 )
 
+object CompletionArgument {
+
+  /** Wire key for the argument name. */
+  val NameKey: String = "name"
+
+  /** Wire key for the partial argument value. */
+  val ValueKey: String = "value"
+}
+
 /** Previously resolved arguments providing context for completion.
  *
  *  @param arguments Already-known argument name/value pairs.
@@ -75,6 +84,12 @@ case class CompletionArgument(
 case class CompletionContext(
     arguments: Option[Map[String, String]] = None
 )
+
+object CompletionContext {
+
+  /** Wire key for the optional already-known arguments map. */
+  val ArgumentsKey: String = "arguments"
+}
 
 /** Parameters for a `completion/complete` request.
  *
@@ -89,6 +104,18 @@ case class CompleteRequestParams(
     argument: CompletionArgument,
     context: Option[CompletionContext] = None
 )
+
+object CompleteRequestParams {
+
+  /** Wire key for the reference being completed against. */
+  val RefKey: String = "ref"
+
+  /** Wire key for the argument currently being completed. */
+  val ArgumentKey: String = "argument"
+
+  /** Wire key for the optional completion context. */
+  val ContextKey: String = "context"
+}
 
 /** Asks the server for completion options for an argument. */
 case class CompleteRequest(

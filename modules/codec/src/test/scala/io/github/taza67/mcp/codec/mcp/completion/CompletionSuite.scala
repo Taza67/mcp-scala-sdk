@@ -1,6 +1,8 @@
 package io.github.taza67.mcp.codec.mcp.completion
 
+import io.github.taza67.mcp.codec.CodecAssertions
 import io.github.taza67.mcp.codec.TestSupport
+import io.github.taza67.mcp.codec.mcp.ResultAssertions
 import io.github.taza67.mcp.codec.mcp.completion.{Completion => CompletionCodec}
 import io.github.taza67.mcp.protocol.json.JsonNull
 import io.github.taza67.mcp.protocol.json.JsonNumber
@@ -9,15 +11,22 @@ import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.jsonrpc.NumberRequestId
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
+import io.github.taza67.mcp.protocol.json.JsonArray
+import io.github.taza67.mcp.protocol.json.JsonBool
+import io.github.taza67.mcp.protocol.mcp.CustomResultType
 import io.github.taza67.mcp.protocol.mcp.McpProtocolVersion20260728
 import io.github.taza67.mcp.protocol.mcp.MetaObject
 import io.github.taza67.mcp.protocol.mcp.RequestMeta
 import io.github.taza67.mcp.protocol.mcp.RequestParams
+import io.github.taza67.mcp.protocol.mcp.Result
+import io.github.taza67.mcp.protocol.mcp.ResultMeta
 import io.github.taza67.mcp.protocol.mcp.completion.{Completion => CompletionMethods}
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequest
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.completion.CompletionArgument
 import io.github.taza67.mcp.protocol.mcp.completion.CompletionContext
+import io.github.taza67.mcp.protocol.mcp.completion.CompletionPayload
 import io.github.taza67.mcp.protocol.mcp.completion.CompletionReference
 import io.github.taza67.mcp.protocol.mcp.completion.PromptReference
 import io.github.taza67.mcp.protocol.mcp.completion.ResourceTemplateReference
@@ -25,7 +34,7 @@ import munit.FunSuite
 
 
 
-class CompletionSuite extends FunSuite {
+class CompletionSuite extends FunSuite with CodecAssertions with ResultAssertions {
 
   test("prompt reference with title decodes and encodes exactly") {
     val raw = JsonObject(
@@ -388,6 +397,164 @@ class CompletionSuite extends FunSuite {
     )
     cases.foreach(raw =>
       assert(CompletionCodec.toCompleteRequest(raw).isLeft, s"expected rejection for $raw")
+    )
+  }
+
+  test("completion payload encodes and decodes exact members") {
+    val raw = JsonObject(
+      Map(
+        CompletionPayload.ValuesKey -> JsonArray(
+          List(JsonString("main"), JsonString("feature/x"))
+        ),
+        CompletionPayload.TotalKey   -> JsonNumber(10),
+        CompletionPayload.HasMoreKey -> JsonBool(true)
+      )
+    )
+    val expected = CompletionPayload(
+      values = List("main", "feature/x"),
+      total = Some(10L),
+      hasMore = Some(true)
+    )
+    assertEquals(CompletionCodec.toCompletionPayload(raw), Right(expected))
+    assertEquals(CompletionCodec.fromCompletionPayload(expected), raw)
+  }
+
+  test("payload omissions and empty values encode without nulls") {
+    val minimal = JsonObject(
+      Map(CompletionPayload.ValuesKey -> JsonArray(List(JsonString("a"))))
+    )
+    val expected = CompletionPayload(values = List("a"))
+    assertEquals(CompletionCodec.toCompletionPayload(minimal), Right(expected))
+    assertEquals(CompletionCodec.fromCompletionPayload(expected), minimal)
+
+    val empty = JsonObject(
+      Map(CompletionPayload.ValuesKey -> JsonArray(Nil))
+    )
+    assertEquals(
+      CompletionCodec.toCompletionPayload(empty),
+      Right(CompletionPayload(values = Nil))
+    )
+  }
+
+  test("the 100-item values bound is enforced at decode and construction") {
+    val atLimit = JsonObject(
+      Map(
+        CompletionPayload.ValuesKey ->
+          JsonArray(List.fill(CompletionPayload.MaxValues)(JsonString("v")))
+      )
+    )
+    assertEquals(
+      CompletionCodec.toCompletionPayload(atLimit),
+      Right(CompletionPayload(values = List.fill(CompletionPayload.MaxValues)("v")))
+    )
+
+    val overLimit = JsonObject(
+      Map(
+        CompletionPayload.ValuesKey ->
+          JsonArray(List.fill(CompletionPayload.MaxValues + 1)(JsonString("v")))
+      )
+    )
+    assert(CompletionCodec.toCompletionPayload(overLimit).isLeft)
+    intercept[IllegalArgumentException] {
+      CompletionPayload(values = List.fill(CompletionPayload.MaxValues + 1)("v"))
+    }
+    intercept[IllegalArgumentException] {
+      CompletionPayload(values = Nil)
+        .copy(values = List.fill(CompletionPayload.MaxValues + 1)("v"))
+    }
+  }
+
+  test("invalid values members reject") {
+    val cases = List(
+      JsonObject(Map.empty),
+      JsonObject(Map(CompletionPayload.ValuesKey -> JsonNumber(1))),
+      JsonObject(
+        Map(
+          CompletionPayload.ValuesKey -> JsonArray(
+            List(JsonString("ok"), JsonNumber(1))
+          )
+        )
+      ),
+      JsonObject(Map(CompletionPayload.ValuesKey -> JsonNull))
+    )
+    cases.foreach(raw =>
+      assert(CompletionCodec.toCompletionPayload(raw).isLeft, s"expected rejection for $raw")
+    )
+  }
+
+  test("total and hasMore types are validated exactly") {
+    def payload(member: (String, JsonValue)): JsonObject =
+      JsonObject(
+        Map(
+          CompletionPayload.ValuesKey -> JsonArray(List(JsonString("a"))),
+          member
+        )
+      )
+    val cases = List(
+      payload(CompletionPayload.TotalKey -> JsonNumber(BigDecimal("1.5"))),
+      payload(
+        CompletionPayload.TotalKey -> JsonNumber(BigDecimal("9223372036854775808"))
+      ),
+      payload(CompletionPayload.TotalKey -> JsonString("x")),
+      payload(CompletionPayload.HasMoreKey -> JsonNumber(1)),
+      payload(CompletionPayload.HasMoreKey -> JsonNull)
+    )
+    cases.foreach(raw =>
+      assert(CompletionCodec.toCompletionPayload(raw).isLeft, s"expected rejection for $raw")
+    )
+
+    val exact = JsonObject(
+      Map(
+        CompletionPayload.ValuesKey -> JsonArray(List(JsonString("a"))),
+        CompletionPayload.TotalKey -> JsonNumber(BigDecimal(Long.MaxValue))
+      )
+    )
+    assertEquals(
+      CompletionCodec.toCompletionPayload(exact),
+      Right(CompletionPayload(values = List("a"), total = Some(Long.MaxValue)))
+    )
+  }
+
+  test("complete result round-trips through the generic result envelope") {
+    val rich = CompleteResult(
+      completion = CompletionPayload(
+        values = List("main"),
+        total = Some(-3L),
+        hasMore = Some(false)
+      ),
+      resultType = CustomResultType("future-kind"),
+      meta = Some(
+        ResultMeta(extensions = MetaObject(Map("x-ext" -> JsonString("1"))))
+      )
+    )
+    assertDomainResultRoundTrip(rich)(
+      d =>
+        Result(
+          resultType = d.resultType,
+          fields = CompletionCodec.fromCompleteResult(d),
+          meta = d.meta
+        ),
+      CompletionCodec.fromCompleteResult,
+      CompletionCodec.toCompleteResult,
+      (d, rt, meta) => d.copy(resultType = rt, meta = meta)
+    )
+  }
+
+  test("complete result rejects missing or malformed completion field") {
+    val cases = List(
+      JsonObject(Map.empty),
+      JsonObject(Map(CompleteResult.CompletionKey -> JsonNumber(1))),
+      JsonObject(Map(CompleteResult.CompletionKey -> JsonObject(Map.empty))),
+      JsonObject(
+        Map(
+          CompleteResult.CompletionKey -> JsonObject(
+            Map(CompletionPayload.ValuesKey -> JsonNumber(1))
+          )
+        )
+      )
+    )
+    cases.foreach(raw =>
+      assert(CompletionCodec.toCompleteResult(raw).isLeft, s"expected rejection for $raw")
     )
   }
 }

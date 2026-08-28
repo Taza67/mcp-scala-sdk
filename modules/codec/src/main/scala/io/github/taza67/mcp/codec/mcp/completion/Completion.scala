@@ -4,6 +4,7 @@ import io.github.taza67.mcp.codec.DecodingError
 import io.github.taza67.mcp.codec.Fields
 import io.github.taza67.mcp.codec.Primitives
 import io.github.taza67.mcp.codec.mcp.PlainRequests
+import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
@@ -11,8 +12,10 @@ import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.completion.{Completion => CompletionMethods}
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequest
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.completion.CompletionArgument
 import io.github.taza67.mcp.protocol.mcp.completion.CompletionContext
+import io.github.taza67.mcp.protocol.mcp.completion.CompletionPayload
 import io.github.taza67.mcp.protocol.mcp.completion.CompletionReference
 import io.github.taza67.mcp.protocol.mcp.completion.PromptReference
 import io.github.taza67.mcp.protocol.mcp.completion.ResourceTemplateReference
@@ -85,6 +88,27 @@ object Completion {
       request.jsonrpc
     )
 
+  def fromCompletionPayload(payload: CompletionPayload): JsonObject =
+    JsonObject(
+      Fields.withOptional(
+        Map(
+          CompletionPayload.ValuesKey ->
+            Primitives.fromList(payload.values)(JsonString(_))
+        ),
+        CompletionPayload.TotalKey ->
+          payload.total.map(t => JsonNumber(BigDecimal(t))),
+        CompletionPayload.HasMoreKey -> payload.hasMore.map(Primitives.fromBool)
+      )
+    )
+
+  /** Result-field projection: `resultType` and `_meta` are handled by the
+   *  generic [[io.github.taza67.mcp.codec.mcp.Params]] result envelope.
+   */
+  def fromCompleteResult(result: CompleteResult): JsonObject =
+    JsonObject(
+      Map(CompleteResult.CompletionKey -> fromCompletionPayload(result.completion))
+    )
+
   def toCompletionReference(
       obj: JsonObject
   ): Either[DecodingError, CompletionReference] = {
@@ -154,6 +178,46 @@ object Completion {
       (id, params, jsonrpc) =>
         CompleteRequest(id = id, params = params, jsonrpc = jsonrpc)
     }
+
+  def toCompletionPayload(
+      obj: JsonObject
+  ): Either[DecodingError, CompletionPayload] = {
+    val fields = obj.value
+    for {
+      values <- Fields
+        .required(fields, CompletionPayload.ValuesKey)
+        .flatMap(
+          Primitives.toList(_, CompletionPayload.ValuesKey)(
+            Primitives.asString(_, CompletionPayload.ValuesKey)
+          )
+        )
+      _ <- Either.cond(
+        values.lengthCompare(CompletionPayload.MaxValues) <= 0,
+        (),
+        DecodingError("Invalid values: expected at most 100 items")
+      )
+      total <- Fields.optional(fields, CompletionPayload.TotalKey)(
+        Primitives.asLong(_, CompletionPayload.TotalKey)
+      )
+      hasMore <- Fields.optionalBool(fields, CompletionPayload.HasMoreKey)
+    } yield CompletionPayload(values = values, total = total, hasMore = hasMore)
+  }
+
+  /** See [[fromCompleteResult]]: decodes only the `completion` field;
+   *  `resultType` and `_meta` belong to the generic result envelope.
+   */
+  def toCompleteResult(
+      obj: JsonObject
+  ): Either[DecodingError, CompleteResult] = {
+    val fields = obj.value
+    for {
+      completion <- Fields
+        .required(fields, CompleteResult.CompletionKey)
+        .flatMap(v =>
+          Fields.asObject(v, CompleteResult.CompletionKey).flatMap(toCompletionPayload)
+        )
+    } yield CompleteResult(completion = completion)
+  }
 
   private def toPromptReference(
       fields: Map[String, JsonValue]

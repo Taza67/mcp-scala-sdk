@@ -134,7 +134,27 @@ case class CompletionPayload(
     values: List[String],
     total: Option[Long] = None,
     hasMore: Option[Boolean] = None
-)
+) {
+  require(
+    values.lengthCompare(CompletionPayload.MaxValues) <= 0,
+    "completion values must not exceed 100 items"
+  )
+}
+
+object CompletionPayload {
+
+  /** Wire key for the completion values array. */
+  val ValuesKey: String = "values"
+
+  /** Wire key for the optional total count. */
+  val TotalKey: String = "total"
+
+  /** Wire key for the optional has-more flag. */
+  val HasMoreKey: String = "hasMore"
+
+  /** Normative upper bound on the values array. */
+  val MaxValues: Int = 100
+}
 
 /** Result of a `completion/complete` request.
  *
@@ -147,6 +167,12 @@ case class CompleteResult(
     resultType: ResultType = CompleteResultType,
     meta: Option[ResultMeta] = None
 )
+
+object CompleteResult {
+
+  /** Wire key for the completion payload. */
+  val CompletionKey: String = "completion"
+}
 
 /** Successful JSON-RPC response to a `completion/complete` request. */
 case class CompleteResultResponse(

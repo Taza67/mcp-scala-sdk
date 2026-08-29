@@ -104,6 +104,63 @@ class JsonCodecSuite extends FunSuite with CodecAssertions {
     assert(JsonCodec.JsonValueDecoder.decode("[1]\u000b").isLeft)
   }
 
+  test("root scalar values and empty containers decode literally") {
+    List(
+      ("null", JsonNull),
+      ("true", JsonBool(true)),
+      ("false", JsonBool(false)),
+      ("42", JsonNumber(BigDecimal(42))),
+      ("\"s\"", JsonString("s")),
+      ("[]", JsonArray(Nil)),
+      ("{}", JsonObject(Map.empty))
+    ).foreach { case (raw, expected) =>
+      assertEquals(JsonCodec.JsonValueDecoder.decode(raw), Right(expected))
+    }
+  }
+
+  test("malformed numeric literals reject at root and nested") {
+    val bad = List(
+      "01", "-01", "1.", "1e", "1e+", "1e-", "+1", ".1", "NaN", "Infinity"
+    )
+    bad.foreach { raw =>
+      assert(
+        JsonCodec.JsonValueDecoder.decode(raw).isLeft,
+        s"expected rejection for $raw"
+      )
+      assert(
+        JsonCodec.JsonValueDecoder.decode(s"[$raw]").isLeft,
+        s"expected rejection for [$raw]"
+      )
+      assert(
+        JsonCodec.JsonValueDecoder.decode(s"""{"a":$raw}""").isLeft,
+        s"expected rejection for nested $raw"
+      )
+    }
+  }
+
+  test("valid numbers decode at root and nested") {
+    val good = List("0", "-0", "1.0", "1e+2", "-1E-2")
+    good.foreach { raw =>
+      assert(
+        JsonCodec.JsonValueDecoder.decode(raw).isRight,
+        s"expected acceptance for $raw"
+      )
+      assert(JsonCodec.JsonValueDecoder.decode(s"[$raw]").isRight)
+      assert(JsonCodec.JsonValueDecoder.decode(s"""{"a":$raw}""").isRight)
+    }
+  }
+
+  test("strings containing number-like text and escapes are untouched") {
+    val text = "01 -01 1. \"quoted\" \\\nend"
+    val value = JsonObject(Map("t" -> JsonString(text)))
+    val encoded = JsonCodec.JsonValueEncoder.encode(value)
+    assertEquals(JsonCodec.JsonValueDecoder.decode(encoded), Right(value))
+    assertEquals(
+      JsonCodec.JsonValueDecoder.decode("""{"t":"01 -01 1."}"""),
+      Right(JsonObject(Map("t" -> JsonString("01 -01 1."))))
+    )
+  }
+
   test("duplicate object keys collapse last-wins") {
     assertEquals(
       JsonCodec.JsonValueDecoder.decode("{\"a\":1,\"a\":2}"),

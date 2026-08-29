@@ -87,15 +87,63 @@ object JsonCodec {
       }
     }
 
+  /** Exact JSON number grammar (RFC 8259): no leading zeros, digits required
+   *  on both sides of the fraction, and a non-empty exponent body.
+   */
+  private val NumberPattern =
+    "-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?".r.pattern
+
+  /** Preflight numeric lexemes outside strings: zio-json 0.7.44 accepts
+   *  invalid literals such as `01`, `-01`, and `1.`, so number-shaped tokens
+   *  are checked against [[NumberPattern]] before the library parses them.
+   *  String contents (including escaped quotes) are skipped untouched.
+   */
+  private def validNumberLexemes(input: String): Boolean = {
+    var i = 0
+    var inString = false
+    var escaped = false
+    val len = input.length
+    var ok = true
+    while (ok && i < len) {
+      val c = input.charAt(i)
+      if (inString) {
+        if (escaped) escaped = false
+        else if (c == '\\') escaped = true
+        else if (c == '"') inString = false
+        i += 1
+      } else if (c == '"') {
+        inString = true
+        i += 1
+      } else if ((c >= '0' && c <= '9') || c == '-') {
+        var j = i + 1
+        while (
+          j < len && {
+            val t = input.charAt(j)
+            (t >= '0' && t <= '9') || t == '+' || t == '-' || t == '.' ||
+              t == 'e' || t == 'E'
+          }
+        ) j += 1
+        ok = NumberPattern.matcher(input.substring(i, j)).matches()
+        i = j
+      } else i += 1
+    }
+    ok
+  }
+
   implicit object JsonValueDecoder extends CodecDecoder[JsonValue] {
     def decode(value: String): Either[DecodingError, JsonValue] =
-      try
-        strictParser.decodeJson(value) match {
-          case Left(_)     => Left(DecodingError("Invalid JSON"))
-          case Right(json) => Right(fromZioJson(json))
+      // The appended whitespace normalizes zio-json's boundary-char retraction:
+      // a number lexer that hits raw EOF leaves its last digit in the reader,
+      // which the end-of-input guard would otherwise reject as trailing data.
+      if (!validNumberLexemes(value)) Left(DecodingError("Invalid JSON"))
+      else
+        try
+          strictParser.decodeJson(value + ' ') match {
+            case Left(_)     => Left(DecodingError("Invalid JSON"))
+            case Right(json) => Right(fromZioJson(json))
+          }
+        catch {
+          case NonFatal(_) => Left(DecodingError("Invalid JSON"))
         }
-      catch {
-        case NonFatal(_) => Left(DecodingError("Invalid JSON"))
-      }
   }
 }

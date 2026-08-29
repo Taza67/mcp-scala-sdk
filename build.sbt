@@ -56,7 +56,6 @@ lazy val codecZiojson = (project in file("modules/codec/ziojson"))
   .dependsOn(codec % "compile->compile;test->test")
   .settings(
     name := "mcp-codec-zio-json",
-    publish / skip := true,
     libraryDependencies += "dev.zio" %% "zio-json" % "0.7.44",
     libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
     Test / test := (Test / testFull).value

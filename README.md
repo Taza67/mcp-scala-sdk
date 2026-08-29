@@ -41,11 +41,11 @@
 
 ## About The Project
 
-`mcp-scala-sdk` is a Scala SDK for building [Model Context Protocol](https://modelcontextprotocol.io/) servers. It targets the [2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) revision and implements a subset of server functionality: a codec-neutral protocol model, ADT projections over a minimal JSON AST, a Circe wire codec, a synchronous server, and a strict stdio transport.
+`mcp-scala-sdk` is a Scala SDK for building [Model Context Protocol](https://modelcontextprotocol.io/) servers. It targets the [2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) revision and implements a subset of server functionality: a codec-neutral protocol model, ADT projections over a minimal JSON AST, selectable Circe or zio-json wire codecs, a synchronous server, and a strict stdio transport.
 
 Version `0.1.0-alpha.1` is an unreleased local build, not published to Maven. The default `McpServer` factory always registers `server/discover`, and registers `tools/list` and `tools/call` when tools are provided; the shipped example registers a `ping` tool. The lower-level `Handler` API supports custom method registrations, and the protocol and codec modules model domains broader than the turnkey server covers.
 
-Client support, HTTP transport, Cats and ZIO frontends, zio-json, Scala 3, Scala.js, Scala Native, and the notification/subscription/completion domains are not implemented.
+Client support, HTTP transport, Cats and ZIO frontends, Scala 3, Scala.js, and Scala Native are not implemented. Completion AST codecs exist in `codec.mcp.completion`, but completion runtime callbacks are still pending; the notification/subscription domains remain deferred at codec and runtime level.
 
 <p align="right"><a href="#readme-top" title="Back to top">↑</a></p>
 
@@ -148,7 +148,7 @@ A few rules the current server enforces:
 
 * [Scala](https://www.scala-lang.org/) 2.13
 * [sbt](https://www.scala-sbt.org/) 2.x
-* [Circe](https://circe.github.io/circe/)
+* [Circe](https://circe.github.io/circe/) or [zio-json](https://zio.dev/zio-json/) (selectable wire codec)
 * [MUnit](https://scalameta.org/munit/)
 
 <p align="right"><a href="#readme-top" title="Back to top">↑</a></p>

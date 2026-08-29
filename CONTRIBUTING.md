@@ -77,7 +77,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/).
 | `modules/server` | implemented | Synchronous MCP server orchestration |
 | `modules/transport/stdio` | implemented | Bounded stdio transport |
 | `examples/stdio` | implemented | Runnable example server and staged distribution |
-| `modules/codec/ziojson` | placeholder | zio-json bridge, not implemented |
+| `modules/codec/ziojson` | implemented | zio-json bridge for wire JSON |
 | `modules/transport/http` | placeholder | HTTP transport, not implemented |
 
 Protocol types stay independent of JSON libraries; wire encoding lives in `codec` (see [ADR-0003](docs/decisions/0003-protocol-json-ast-without-codec-dependency.md) and [ADR-0006](docs/decisions/0006-adt-json-ast-projection-ownership.md)).

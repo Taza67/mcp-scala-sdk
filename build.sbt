@@ -58,7 +58,8 @@ lazy val codecZiojson = (project in file("modules/codec/ziojson"))
     name := "mcp-codec-zio-json",
     publish / skip := true,
     libraryDependencies += "dev.zio" %% "zio-json" % "0.7.44",
-    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
   )
 
 lazy val server = (project in file("modules/server"))

@@ -1,6 +1,8 @@
 package io.github.taza67.mcp.server
 
 import io.github.taza67.mcp.codec.mcp.completion.{Completion => CompletionCodec}
+import io.github.taza67.mcp.codec.mcp.discover.{Discover => DiscoverCodec}
+import io.github.taza67.mcp.codec.mcp.tools.{Tools => ToolsCodec}
 import io.github.taza67.mcp.protocol.json.JsonNumber
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.json.JsonString
@@ -9,10 +11,12 @@ import io.github.taza67.mcp.protocol.jsonrpc.ApplicationError
 import io.github.taza67.mcp.protocol.jsonrpc.Error
 import io.github.taza67.mcp.protocol.jsonrpc.InternalError
 import io.github.taza67.mcp.protocol.jsonrpc.InvalidParamsError
+import io.github.taza67.mcp.protocol.jsonrpc.MethodNotFoundError
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 import io.github.taza67.mcp.protocol.jsonrpc.StringRequestId
 import io.github.taza67.mcp.protocol.mcp.ClientCapabilities
 import io.github.taza67.mcp.protocol.mcp.CompleteResultType
+import io.github.taza67.mcp.protocol.mcp.Implementation
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
 import io.github.taza67.mcp.protocol.mcp.McpProtocolVersion20260728
 import io.github.taza67.mcp.protocol.mcp.McpRequest
@@ -22,6 +26,13 @@ import io.github.taza67.mcp.protocol.mcp.PaginatedRequestParams
 import io.github.taza67.mcp.protocol.mcp.RequestMeta
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.ResultMeta
+import io.github.taza67.mcp.protocol.mcp.TextContent
+import io.github.taza67.mcp.protocol.mcp.discover.ServerDiscover
+import io.github.taza67.mcp.protocol.mcp.tools.{Tools => ToolMethods}
+import io.github.taza67.mcp.protocol.mcp.tools.CallToolRequestParams
+import io.github.taza67.mcp.protocol.mcp.tools.CallToolResult
+import io.github.taza67.mcp.protocol.mcp.tools.Tool
+import io.github.taza67.mcp.protocol.mcp.tools.ToolInputSchema
 import io.github.taza67.mcp.protocol.mcp.completion.{Completion => CompletionMethods}
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
@@ -119,9 +130,10 @@ class CompletionHandlerSuite extends FunSuite {
   }
 
   test("generic Handler.of encodes CompleteResult through the implicit encoder") {
+    import Results.completeResultEncoder
     val handler = Handler.of[CompleteResult](_ =>
       Right(CompleteResult(completion = CompletionPayload(values = List("a"))))
-    )(Results.completeResultEncoder)
+    )
     val result = handler.execute(Some(validParams))
     assert(result.isRight)
     result.foreach { r =>
@@ -218,6 +230,159 @@ class CompletionHandlerSuite extends FunSuite {
         assert(!error.error.message.contains("secret-crash-detail"))
       case other =>
         fail(s"expected error response, got $other")
+    }
+    server.handle(request(validParams)) match {
+      case success: McpSuccessResponse =>
+        assertEquals(success.id, requestId: RequestId)
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+  }
+
+  private def discoverRequest: McpRequest =
+    McpRequest(
+      method = ServerDiscover.method,
+      id = requestId,
+      params = Some(RequestParams(meta = requestMeta))
+    )
+
+  private val impl = Implementation(name = "ex", version = "1")
+
+  test("factory without completion advertises no capability and rejects the method") {
+    val server = McpServer(info = impl)
+
+    server.handle(discoverRequest) match {
+      case success: McpSuccessResponse =>
+        val decoded = DiscoverCodec.toDiscoverResult(success.result.fields)
+        assert(decoded.isRight)
+        decoded.foreach { result =>
+          assertEquals(result.capabilities.completions, None)
+          assertEquals(result.capabilities.tools, None)
+        }
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+    server.handle(request(validParams)) match {
+      case error: McpErrorResponse =>
+        assertEquals(error.id, Option[RequestId](requestId))
+        assert(error.error.isInstanceOf[MethodNotFoundError])
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
+  test("factory with completion registers the method and advertises it, no tools") {
+    val server = McpServer(
+      info = impl,
+      completion = Some(_ => Right(CompleteResult(completion = payload)))
+    )
+
+    server.handle(discoverRequest) match {
+      case success: McpSuccessResponse =>
+        val decoded = DiscoverCodec.toDiscoverResult(success.result.fields)
+        assert(decoded.isRight)
+        decoded.foreach { result =>
+          assertEquals(result.capabilities.completions, Some(JsonObject(Map.empty)))
+          assertEquals(result.capabilities.tools, None)
+        }
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+    server.handle(request(validParams)) match {
+      case success: McpSuccessResponse =>
+        assertEquals(success.id, requestId: RequestId)
+        assertEquals(
+          success.result.meta.flatMap(_.serverInfo),
+          Some(impl)
+        )
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+    server.handle(
+      McpRequest(method = ToolMethods.list, id = requestId)
+    ) match {
+      case error: McpErrorResponse =>
+        assert(error.error.isInstanceOf[MethodNotFoundError])
+      case other =>
+        fail(s"expected error response, got $other")
+    }
+  }
+
+  test("completion meta merge fills missing identity and preserves supplied values") {
+    val extensions = MetaObject(Map("x-ext" -> JsonString("1")))
+    val suppliedOnly = McpServer(
+      info = impl,
+      completion = Some(_ =>
+        Right(
+          CompleteResult(
+            completion = payload,
+            meta = Some(ResultMeta(extensions = extensions))
+          )
+        )
+      )
+    )
+    suppliedOnly.handle(request(validParams)) match {
+      case success: McpSuccessResponse =>
+        assertEquals(
+          success.result.meta,
+          Some(ResultMeta(serverInfo = Some(impl), extensions = extensions))
+        )
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+
+    val explicit = Implementation(name = "other", version = "9")
+    val explicitServer = McpServer(
+      info = impl,
+      completion = Some(_ =>
+        Right(
+          CompleteResult(
+            completion = payload,
+            meta = Some(ResultMeta(serverInfo = Some(explicit)))
+          )
+        )
+      )
+    )
+    explicitServer.handle(request(validParams)) match {
+      case success: McpSuccessResponse =>
+        assertEquals(
+          success.result.meta.flatMap(_.serverInfo),
+          Some(explicit)
+        )
+      case other =>
+        fail(s"expected success response, got $other")
+    }
+  }
+
+  test("tools and completion coexist; three-arg construction stays valid") {
+    val ping = ServerTool(
+      Tool(name = "ping", inputSchema = ToolInputSchema()),
+      _ => Right(CallToolResult(content = List(TextContent(text = "pong"))))
+    )
+    // Positional three-argument construction must keep compiling.
+    val server = McpServer(
+      impl,
+      Seq(ping),
+      Instructions.none,
+      completion = Some(_ => Right(CompleteResult(completion = payload)))
+    )
+
+    server.handle(
+      McpRequest(
+        method = ToolMethods.call,
+        id = requestId,
+        params = Some(
+          params(CallToolRequestParams.NameKey -> JsonString("ping"))
+        )
+      )
+    ) match {
+      case success: McpSuccessResponse =>
+        assertEquals(
+          ToolsCodec.toCallToolResult(success.result.fields),
+          Right(CallToolResult(content = List(TextContent(text = "pong"))))
+        )
+      case other =>
+        fail(s"expected success response, got $other")
     }
     server.handle(request(validParams)) match {
       case success: McpSuccessResponse =>

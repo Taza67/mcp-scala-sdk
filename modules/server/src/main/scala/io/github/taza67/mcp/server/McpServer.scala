@@ -5,7 +5,9 @@ import scala.util.control.NonFatal
 import io.github.taza67.mcp.protocol.jsonrpc.Error
 import io.github.taza67.mcp.protocol.jsonrpc.InternalError
 import io.github.taza67.mcp.protocol.jsonrpc.InvalidParamsError
+import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.MethodNotFoundError
+import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.mcp.Implementation
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
 import io.github.taza67.mcp.protocol.mcp.McpProtocolVersion20260728
@@ -18,6 +20,9 @@ import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.ResultMeta
 import io.github.taza67.mcp.protocol.mcp.ServerCapabilities
 import io.github.taza67.mcp.protocol.mcp.ToolsCapability
+import io.github.taza67.mcp.protocol.mcp.completion.{Completion => CompletionMethods}
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.discover.DiscoverResult
 import io.github.taza67.mcp.protocol.mcp.discover.ServerDiscover
 import io.github.taza67.mcp.protocol.mcp.tools.{Tools => ToolMethods}
@@ -50,30 +55,32 @@ case class McpServer(handlerRegistry: HandlerRegistry) extends Server {
 
 object McpServer {
 
-  /** Builds a server from identity and tool declarations.
+  /** Builds a server from identity, tool declarations, and an optional
+   *  completion callback.
    *
    *  Registers `server/discover` always. Registers `tools/list` and `tools/call`
-   *  when [[tools]] is non-empty. Duplicate tool names fail fast.
+   *  when [[tools]] is non-empty. Registers `completion/complete` when
+   *  [[completion]] is defined and advertises the completions capability in
+   *  discovery. Duplicate tool names fail fast.
    */
   def apply(
       info: Implementation,
       tools: Seq[ServerTool] = Seq.empty,
-      instructions: Instructions = Instructions.none
+      instructions: Instructions = Instructions.none,
+      completion: Option[CompleteRequestParams => Either[Error, CompleteResult]] = None
   ): McpServer = {
     val meta = Some(ResultMeta(serverInfo = Some(info)))
     val discoverHandler =
       Handler.of {
         case Some(_: RequestParams) =>
-          Right(discoverResult(tools, instructions, meta))
+          Right(discoverResult(tools, instructions, meta, completion.isDefined))
         case _ =>
           Left(InvalidParamsError())
       }(Results.discoverResultEncoder)
-    val methods =
-      if (tools.isEmpty)
-        Map(ServerDiscover.method -> discoverHandler)
+    val toolMethods: Map[Method, Handler] =
+      if (tools.isEmpty) Map.empty
       else
         Map(
-          ServerDiscover.method -> discoverHandler,
           ToolMethods.list -> Handler.of {
             case Some(params: PaginatedRequestParams) if params.cursor.isEmpty =>
               Right(listToolsResult(tools, meta))
@@ -87,17 +94,31 @@ object McpServer {
             }: _*
           )
         )
+    val completionMethods: Map[Method, Handler] =
+      completion match {
+        case Some(run) =>
+          Map(
+            CompletionMethods.complete ->
+              Handler.complete(runCompletion(run, meta))
+          )
+        case None => Map.empty
+      }
+    val methods =
+      Map(ServerDiscover.method -> discoverHandler) ++ toolMethods ++ completionMethods
     McpServer(HandlerRegistryInMemory(methods))
   }
 
   private def discoverResult(
       tools: Seq[ServerTool],
       instructions: Instructions,
-      meta: Option[ResultMeta]
+      meta: Option[ResultMeta],
+      hasCompletion: Boolean
   ): DiscoverResult =
     DiscoverResult(
       supportedVersions = List(McpProtocolVersion20260728.value),
       capabilities = ServerCapabilities(
+        completions =
+          if (hasCompletion) Some(JsonObject(Map.empty)) else None,
         tools = if (tools.nonEmpty) Some(ToolsCapability()) else None
       ),
       ttlMs = 0L,
@@ -117,18 +138,36 @@ object McpServer {
       meta = meta
     )
 
+  /** Merges handler-supplied result meta with the default: extensions and an
+   *  explicit `serverInfo` are preserved; a missing identity is filled.
+   */
+  private def mergeMeta(
+      supplied: Option[ResultMeta],
+      fallback: Option[ResultMeta]
+  ): Option[ResultMeta] =
+    supplied match {
+      case Some(suppliedMeta) =>
+        Some(
+          suppliedMeta.copy(
+            serverInfo = suppliedMeta.serverInfo.orElse(fallback.flatMap(_.serverInfo))
+          )
+        )
+      case None => fallback
+    }
+
   private def run(
       tool: ServerTool,
       meta: Option[ResultMeta]
   )(call: ToolCall): Either[Error, CallToolResult] =
     tool.run(call).map { result =>
-      val merged = result.meta match {
-        case Some(supplied) =>
-          Some(
-            supplied.copy(serverInfo = supplied.serverInfo.orElse(meta.flatMap(_.serverInfo)))
-          )
-        case None => meta
-      }
-      result.copy(meta = merged)
+      result.copy(meta = mergeMeta(result.meta, meta))
+    }
+
+  private def runCompletion(
+      run: CompleteRequestParams => Either[Error, CompleteResult],
+      meta: Option[ResultMeta]
+  )(params: CompleteRequestParams): Either[Error, CompleteResult] =
+    run(params).map { result =>
+      result.copy(meta = mergeMeta(result.meta, meta))
     }
 }

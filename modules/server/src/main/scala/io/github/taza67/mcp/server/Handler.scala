@@ -1,11 +1,14 @@
 package io.github.taza67.mcp.server
 
+import io.github.taza67.mcp.codec.mcp.completion.{Completion => CompletionCodec}
 import io.github.taza67.mcp.codec.mcp.tools.{Tools => ToolsCodec}
 import io.github.taza67.mcp.protocol.jsonrpc.Error
 import io.github.taza67.mcp.protocol.jsonrpc.InvalidParamsError
 import io.github.taza67.mcp.protocol.mcp.McpRequestParams
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.Result
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.tools.CallToolRequestParams
 import io.github.taza67.mcp.protocol.mcp.tools.CallToolResult
 
@@ -47,6 +50,26 @@ object Handler {
           Left(InvalidParamsError(message = "missing tools/call params"))
       }
     }(Results.callToolResultEncoder)
+
+  /** Decodes `completion/complete` params, then runs the domain handler.
+   *
+   *  Decode failures answer a generic [[InvalidParamsError]]: raw decoder
+   *  details never reach the wire.
+   */
+  def complete(
+      execute: CompleteRequestParams => Either[Error, CompleteResult]
+  ): Handler =
+    of { parameters =>
+      parameters match {
+        case Some(plain: RequestParams) =>
+          CompletionCodec.toCompleteRequestParams(plain) match {
+            case Left(_)      => Left(InvalidParamsError())
+            case Right(value) => execute(value)
+          }
+        case _ =>
+          Left(InvalidParamsError(message = "missing completion/complete params"))
+      }
+    }(Results.completeResultEncoder)
 
   /** Routes `tools/call` by tool name, then runs that tool with a [[ToolCall]].
    *

@@ -45,7 +45,7 @@
 
 Version `0.1.0-alpha.1` is an unreleased local build, not published to Maven. The default `McpServer` factory always registers `server/discover`, and registers `tools/list` and `tools/call` when tools are provided; the shipped example registers a `ping` tool. The lower-level `Handler` API supports custom method registrations, and the protocol and codec modules model domains broader than the turnkey server covers.
 
-Client support, HTTP transport, Cats and ZIO frontends, Scala 3, Scala.js, and Scala Native are not implemented. Completion AST codecs exist in `codec.mcp.completion`, but completion runtime callbacks are still pending; the notification/subscription domains remain deferred at codec and runtime level.
+Client support, HTTP transport, Cats and ZIO frontends, Scala 3, Scala.js, and Scala Native are not implemented. Completion AST codecs and typed handler registration (`Handler.complete`) exist, but the default factory does not register `completion/complete` automatically yet; the notification/subscription domains remain deferred at codec and runtime level.
 
 <p align="right"><a href="#readme-top" title="Back to top">↑</a></p>
 

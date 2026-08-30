@@ -18,7 +18,7 @@ Local alpha build of the MCP server SDK. Not published to Maven.
 - Independent black-box process suite at `scripts/test_stdio.py` exercising the staged launcher end to end.
 - CI job covering `sbt test`, staging, and the process suite.
 - Alternative zio-json wire backend in `modules/codec/ziojson` with strict trailing-input checks, selectable instead of the Circe codec.
-- Completion-domain AST codecs in `codec.mcp.completion` covering references, arguments, context, request params, and result payloads; server-side completion callbacks and runtime support are not included.
+- Completion-domain AST codecs in `codec.mcp.completion` covering references, arguments, context, request params, and result payloads, plus typed handler registration via `Handler.complete`; the default factory does not register `completion/complete` automatically yet.
 
 ### Changed
 

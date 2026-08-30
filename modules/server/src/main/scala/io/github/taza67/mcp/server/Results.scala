@@ -1,5 +1,6 @@
 package io.github.taza67.mcp.server
 
+import io.github.taza67.mcp.codec.mcp.completion.{Completion => CompletionCodec}
 import io.github.taza67.mcp.codec.mcp.discover.{Discover => DiscoverCodec}
 import io.github.taza67.mcp.codec.mcp.prompts.{Prompts => PromptsCodec}
 import io.github.taza67.mcp.codec.mcp.resources.{Resources => ResourcesCodec}
@@ -10,6 +11,7 @@ import io.github.taza67.mcp.protocol.mcp.CompleteResultType
 import io.github.taza67.mcp.protocol.mcp.Result
 import io.github.taza67.mcp.protocol.mcp.ResultMeta
 import io.github.taza67.mcp.protocol.mcp.ResultType
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.discover.DiscoverResult
 import io.github.taza67.mcp.protocol.mcp.prompts.GetPromptResult
 import io.github.taza67.mcp.protocol.mcp.prompts.ListPromptsResult
@@ -86,6 +88,13 @@ object Results {
   def listRoots(listRootsResult: ListRootsResult): Result =
     complete(fields = RootsCodec.fromListRootsResult(listRootsResult))
 
+  def completion(value: CompleteResult): Result =
+    complete(
+      fields = CompletionCodec.fromCompleteResult(value),
+      resultType = value.resultType,
+      meta = value.meta
+    )
+
   implicit val listToolsResultEncoder: ResultEncoder[ListToolsResult] =
     ResultEncoder(listTools)
 
@@ -109,4 +118,7 @@ object Results {
 
   implicit val listRootsResultEncoder: ResultEncoder[ListRootsResult] =
     ResultEncoder(listRoots)
+
+  implicit val completeResultEncoder: ResultEncoder[CompleteResult] =
+    ResultEncoder(completion)
 }

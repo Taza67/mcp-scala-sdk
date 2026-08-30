@@ -61,6 +61,15 @@ lazy val codecZiojson = (project in file("modules/codec/ziojson"))
     Test / test := (Test / testFull).value
   )
 
+lazy val client = (project in file("modules/client"))
+  .dependsOn(protocol, codec)
+  .settings(
+    name := "mcp-client",
+    publish / skip := true,
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
+  )
+
 lazy val server = (project in file("modules/server"))
   .dependsOn(protocol, codec)
   .settings(
@@ -144,6 +153,7 @@ lazy val root = (project in file("."))
     codec,
     codecCirce,
     codecZiojson,
+    client,
     server,
     transportStdio,
     transportHttp,

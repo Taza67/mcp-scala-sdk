@@ -2,6 +2,10 @@ package io.github.taza67.mcp.client
 
 import scala.util.control.NonFatal
 
+import io.github.taza67.mcp.codec.DecodingError
+import io.github.taza67.mcp.codec.mcp.completion.{Completion => CompletionCodec}
+import io.github.taza67.mcp.codec.mcp.discover.{Discover => DiscoverCodec}
+import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
@@ -9,7 +13,16 @@ import io.github.taza67.mcp.protocol.mcp.McpRequest
 import io.github.taza67.mcp.protocol.mcp.McpRequestParams
 import io.github.taza67.mcp.protocol.mcp.McpResponse
 import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
+import io.github.taza67.mcp.protocol.mcp.RequestMeta
+import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.Result
+import io.github.taza67.mcp.protocol.mcp.ResultMeta
+import io.github.taza67.mcp.protocol.mcp.ResultType
+import io.github.taza67.mcp.protocol.mcp.completion.{Completion => CompletionMethods}
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
+import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
+import io.github.taza67.mcp.protocol.mcp.discover.DiscoverResult
+import io.github.taza67.mcp.protocol.mcp.discover.ServerDiscover
 
 
 
@@ -52,6 +65,43 @@ final case class McpClient(
           case Left(error)     => Left(error)
           case Right(response) => correlate(id, response)
         }
+    }
+
+  /** Runs `server/discover` with explicit per-call request metadata. */
+  def discover(meta: RequestMeta): Either[ClientError, DiscoverResult] =
+    request(ServerDiscover.method, RequestParams(meta = meta)).flatMap { result =>
+      decodeResult[DiscoverResult](result)(
+        DiscoverCodec.toDiscoverResult,
+        (decoded, resultType, resultMeta) =>
+          decoded.copy(resultType = resultType, meta = resultMeta)
+      )
+    }
+
+  /** Runs `completion/complete` with the given typed parameters. */
+  def complete(
+      params: CompleteRequestParams
+  ): Either[ClientError, CompleteResult] =
+    request(
+      CompletionMethods.complete,
+      CompletionCodec.fromCompleteRequestParams(params)
+    ).flatMap { result =>
+      decodeResult[CompleteResult](result)(
+        CompletionCodec.toCompleteResult,
+        (decoded, resultType, resultMeta) =>
+          decoded.copy(resultType = resultType, meta = resultMeta)
+      )
+    }
+
+  /** Decodes `result.fields` and attaches the envelope's `resultType` and
+   *  `meta` to the decoded domain value.
+   */
+  private def decodeResult[A](result: Result)(
+      decode: JsonObject => Either[DecodingError, A],
+      attach: (A, ResultType, Option[ResultMeta]) => A
+  ): Either[ClientError, A] =
+    decode(result.fields) match {
+      case Left(_)      => Left(ClientError.InvalidResult)
+      case Right(value) => Right(attach(value, result.resultType, result.meta))
     }
 
   private def correlate(

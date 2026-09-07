@@ -3,17 +3,25 @@ package io.github.taza67.mcp.client
 import scala.util.control.NonFatal
 
 import io.github.taza67.mcp.codec.DecodingError
+import io.github.taza67.mcp.codec.mcp.Input
 import io.github.taza67.mcp.codec.mcp.completion.{Completion => CompletionCodec}
 import io.github.taza67.mcp.codec.mcp.discover.{Discover => DiscoverCodec}
+import io.github.taza67.mcp.codec.mcp.tools.{Tools => ToolsCodec}
 import io.github.taza67.mcp.protocol.json.JsonObject
 import io.github.taza67.mcp.protocol.jsonrpc.Method
 import io.github.taza67.mcp.protocol.jsonrpc.RequestId
+import io.github.taza67.mcp.protocol.mcp.Completed
+import io.github.taza67.mcp.protocol.mcp.Cursor
+import io.github.taza67.mcp.protocol.mcp.InputRequired
+import io.github.taza67.mcp.protocol.mcp.InputRequiredResultType
 import io.github.taza67.mcp.protocol.mcp.McpErrorResponse
 import io.github.taza67.mcp.protocol.mcp.McpRequest
 import io.github.taza67.mcp.protocol.mcp.McpRequestParams
 import io.github.taza67.mcp.protocol.mcp.McpResponse
 import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
+import io.github.taza67.mcp.protocol.mcp.PaginatedRequestParams
 import io.github.taza67.mcp.protocol.mcp.RequestMeta
+import io.github.taza67.mcp.protocol.mcp.RequestOutcome
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.Result
 import io.github.taza67.mcp.protocol.mcp.ResultMeta
@@ -23,6 +31,10 @@ import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.discover.DiscoverResult
 import io.github.taza67.mcp.protocol.mcp.discover.ServerDiscover
+import io.github.taza67.mcp.protocol.mcp.tools.{Tools => ToolMethods}
+import io.github.taza67.mcp.protocol.mcp.tools.CallToolRequestParams
+import io.github.taza67.mcp.protocol.mcp.tools.CallToolResult
+import io.github.taza67.mcp.protocol.mcp.tools.ListToolsResult
 
 
 
@@ -91,6 +103,59 @@ final case class McpClient(
           decoded.copy(resultType = resultType, meta = resultMeta)
       )
     }
+
+  /** Runs `tools/list` with explicit metadata and an optional page cursor. */
+  def listTools(
+      meta: RequestMeta,
+      cursor: Option[Cursor] = None
+  ): Either[ClientError, ListToolsResult] =
+    request(
+      ToolMethods.list,
+      PaginatedRequestParams(meta = meta, cursor = cursor)
+    ).flatMap { result =>
+      decodeResult[ListToolsResult](result)(
+        ToolsCodec.toListToolsResult,
+        (decoded, resultType, resultMeta) =>
+          decoded.copy(resultType = resultType, meta = resultMeta)
+      )
+    }
+
+  /** Runs `tools/call`; an input-required outcome is returned to the caller
+   *  without retrying or issuing a second request.
+   */
+  def callTool(
+      params: CallToolRequestParams
+  ): Either[ClientError, RequestOutcome[CallToolResult]] =
+    request(
+      ToolMethods.call,
+      ToolsCodec.fromCallToolRequestParams(params)
+    ).flatMap { result =>
+      decodeOutcome[CallToolResult](result)(
+        ToolsCodec.toCallToolResult,
+        (decoded, resultType, resultMeta) =>
+          decoded.copy(resultType = resultType, meta = resultMeta)
+      )
+    }
+
+  /** Decodes a result that may carry the input-required outcome instead of a
+   *  completed payload, attaching envelope `resultType`/`meta` either way.
+   */
+  private def decodeOutcome[A](result: Result)(
+      decode: JsonObject => Either[DecodingError, A],
+      attach: (A, ResultType, Option[ResultMeta]) => A
+  ): Either[ClientError, RequestOutcome[A]] =
+    if (result.resultType == InputRequiredResultType)
+      Input.toInputRequiredResult(result.fields) match {
+        case Left(_) => Left(ClientError.InvalidResult)
+        case Right(value) =>
+          Right(
+            InputRequired(
+              value.copy(resultType = result.resultType, meta = result.meta)
+            )
+          )
+      }
+    else
+      decodeResult(result)(decode, attach).map(Completed(_))
 
   /** Decodes `result.fields` and attaches the envelope's `resultType` and
    *  `meta` to the decoded domain value.

@@ -74,7 +74,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/).
 | `modules/protocol` | implemented | Codec-neutral MCP and JSON-RPC types |
 | `modules/codec` | implemented | Hand-written AST to ADT projections |
 | `modules/codec/circe` | implemented | Circe bridge for wire JSON |
-| `modules/client` | partial | Synchronous client request core with typed discover/complete; no concrete transports |
+| `modules/client` | partial | Synchronous client request core with typed discover/complete/list-tools/call-tool; no concrete transports |
 | `modules/server` | implemented | Synchronous MCP server orchestration |
 | `modules/transport/stdio` | implemented | Bounded stdio transport |
 | `examples/stdio` | implemented | Runnable example server and staged distribution |

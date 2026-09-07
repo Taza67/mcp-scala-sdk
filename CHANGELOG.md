@@ -19,7 +19,7 @@ Local alpha build of the MCP server SDK. Not published to Maven.
 - CI job covering `sbt test`, staging, and the process suite.
 - Alternative zio-json wire backend in `modules/codec/ziojson` with strict trailing-input checks, selectable instead of the Circe codec.
 - Completion-domain AST codecs in `codec.mcp.completion` covering references, arguments, context, request params, and result payloads, plus typed handler registration via `Handler.complete`; the default `McpServer` factory registers `completion/complete` and advertises the completions capability only when the optional `completion` callback parameter is supplied.
-- Synchronous client core in `modules/client`: a `ClientTransport` exchange port, a typed `ClientError` algebra, monotonic `RequestIds` allocation, and `McpClient` with correlated request dispatch plus typed `discover` and `complete` operations. Concrete client transports are not included yet.
+- Synchronous client core in `modules/client`: a `ClientTransport` exchange port, a typed `ClientError` algebra, monotonic `RequestIds` allocation, and `McpClient` with correlated request dispatch plus typed `discover`, `complete`, `listTools`, and `callTool` operations. `callTool` returns `RequestOutcome`, surfacing input-required results to the caller without retrying. Concrete client transports are not included yet.
 
 ### Changed
 

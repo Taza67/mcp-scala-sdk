@@ -50,9 +50,9 @@ private[mcp] case class ContinuationFields(
  *  [[InputRequest]] values are classified by `method`: elicitation, sampling, roots,
  *  or opaque [[CustomInputRequest]]. Map entries must be JSON objects.
  */
-private[mcp] object Input {
+object Input {
 
-  def fromInputResponse(inputResponse: InputResponse): JsonValue =
+  private[mcp] def fromInputResponse(inputResponse: InputResponse): JsonValue =
     inputResponse match {
       case CustomInputResponse(value)       => value
       case ElicitationInputResponse(result) => ElicitationCodec.fromElicitResult(result)
@@ -60,12 +60,12 @@ private[mcp] object Input {
       case SamplingInputResponse(result)    => SamplingCodec.fromCreateMessageResult(result)
     }
 
-  def fromInputResponses(inputResponses: InputResponses): JsonObject =
+  private[mcp] def fromInputResponses(inputResponses: InputResponses): JsonObject =
     JsonObject(inputResponses.value.map { case (key, response) =>
       key -> fromInputResponse(response)
     })
 
-  def fromInputRequest(inputRequest: InputRequest): JsonObject = {
+  private[mcp] def fromInputRequest(inputRequest: InputRequest): JsonObject = {
     val params = inputRequest match {
       case ElicitationInputRequest(params) =>
         Some(ElicitationCodec.fromElicitRequestParams(params))
@@ -83,13 +83,13 @@ private[mcp] object Input {
     )
   }
 
-  def fromInputRequests(inputRequests: InputRequests): JsonObject =
+  private[mcp] def fromInputRequests(inputRequests: InputRequests): JsonObject =
     JsonObject(inputRequests.value.map { case (key, request) =>
       key -> fromInputRequest(request)
     })
 
   /** Encode continuation fields as optional entries for [[Fields.withOptional]]. */
-  def fromContinuation(
+  private[mcp] def fromContinuation(
       continuation: ContinuationFields
   ): Seq[(String, Option[JsonValue])] =
     Seq(
@@ -97,6 +97,10 @@ private[mcp] object Input {
       InputRequiredResult.RequestStateKey -> continuation.requestState.map(JsonString(_))
     )
 
+  /** Encodes an [[InputRequiredResult]] as a full result object, including its
+   *  `resultType` and `_meta` members. Callers projecting a generic
+   *  [[Result]] must not double-write those envelope fields.
+   */
   def fromInputRequiredResult(inputRequiredResult: InputRequiredResult): JsonObject = {
     val base = Map(Result.ResultTypeKey -> Params.fromResultType(inputRequiredResult.resultType))
     JsonObject(
@@ -111,7 +115,7 @@ private[mcp] object Input {
     )
   }
 
-  def toInputResponse(inputResponse: JsonObject): Either[DecodingError, InputResponse] = {
+  private[mcp] def toInputResponse(inputResponse: JsonObject): Either[DecodingError, InputResponse] = {
     val fields = inputResponse.value
     if (fields.contains(ElicitResult.ActionKey))
       ElicitationCodec.toElicitResult(inputResponse).map(ElicitationInputResponse(_))
@@ -126,7 +130,7 @@ private[mcp] object Input {
       Right(CustomInputResponse(inputResponse))
   }
 
-  def toInputResponses(
+  private[mcp] def toInputResponses(
       inputResponses: JsonObject
   ): Either[DecodingError, InputResponses] =
     inputResponses.value
@@ -140,7 +144,7 @@ private[mcp] object Input {
       }
       .map(entries => InputResponses(entries.reverse.toMap))
 
-  def toInputRequest(inputRequest: JsonObject): Either[DecodingError, InputRequest] = {
+  private[mcp] def toInputRequest(inputRequest: JsonObject): Either[DecodingError, InputRequest] = {
     val fields = inputRequest.value
     for {
       method <- Fields
@@ -168,7 +172,7 @@ private[mcp] object Input {
     } yield request
   }
 
-  def toInputRequests(
+  private[mcp] def toInputRequests(
       inputRequests: JsonObject
   ): Either[DecodingError, InputRequests] =
     inputRequests.value
@@ -182,7 +186,7 @@ private[mcp] object Input {
       }
       .map(entries => InputRequests(entries.reverse.toMap))
 
-  def toContinuation(
+  private[mcp] def toContinuation(
       fields: Map[String, JsonValue]
   ): Either[DecodingError, ContinuationFields] =
     for {
@@ -194,6 +198,11 @@ private[mcp] object Input {
       requestState <- Fields.optionalString(fields, InputRequiredResult.RequestStateKey)
     } yield ContinuationFields(inputResponses, requestState)
 
+  /** Decodes a full result object, reading optional `resultType` and `_meta`
+   *  members when present. Callers that already stripped the envelope into a
+   *  generic [[Result]] (e.g. `Result.fields`) must attach `resultType`/`meta`
+   *  to the decoded value themselves.
+   */
   def toInputRequiredResult(
       inputRequiredResult: JsonObject
   ): Either[DecodingError, InputRequiredResult] = {
@@ -221,7 +230,7 @@ private[mcp] object Input {
     )
   }
 
-  def fromRequestOutcome[A](outcome: RequestOutcome[A])(
+  private[mcp] def fromRequestOutcome[A](outcome: RequestOutcome[A])(
       encodeCompleted: A => JsonObject
   ): JsonObject =
     outcome match {
@@ -229,7 +238,7 @@ private[mcp] object Input {
       case InputRequired(result)   => fromInputRequiredResult(result)
     }
 
-  def toRequestOutcome[A](result: JsonObject)(
+  private[mcp] def toRequestOutcome[A](result: JsonObject)(
       decodeCompleted: JsonObject => Either[DecodingError, A]
   ): Either[DecodingError, RequestOutcome[A]] =
     Fields.optionalString(result.value, Result.ResultTypeKey).map(ResultType.fromWire).flatMap {

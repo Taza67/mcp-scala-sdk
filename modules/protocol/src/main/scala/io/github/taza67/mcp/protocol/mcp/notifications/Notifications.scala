@@ -46,6 +46,15 @@ case class CancelledNotificationParams(
     meta: Option[NotificationMeta] = None
 )
 
+object CancelledNotificationParams {
+
+  /** Wire key for the cancelled request's JSON-RPC id. */
+  val RequestIdKey: String = "requestId"
+
+  /** Wire key for the optional human-readable cancellation reason. */
+  val ReasonKey: String = "reason"
+}
+
 /** Indicates cancellation of a previously issued request.
  *
  *  Clients send this to cancel their own in-flight requests. On STDIO, servers

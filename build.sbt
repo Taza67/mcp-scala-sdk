@@ -144,7 +144,9 @@ lazy val transportHttp = (project in file("modules/transport/http"))
   .dependsOn(server)
   .settings(
     name := "mcp-transport-http",
-    publish / skip := true
+    publish / skip := true,
+    libraryDependencies += "org.scalameta" %% "munit" % "1.3.3" % Test,
+    Test / test := (Test / testFull).value
   )
 
 lazy val root = (project in file("."))

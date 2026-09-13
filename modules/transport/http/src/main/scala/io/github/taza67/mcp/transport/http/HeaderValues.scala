@@ -1,10 +1,5 @@
 package io.github.taza67.mcp.transport.http
 
-import java.nio.ByteBuffer
-import java.nio.CharBuffer
-import java.nio.charset.CharacterCodingException
-import java.nio.charset.CodingErrorAction
-import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 import io.github.taza67.mcp.codec.DecodingError
@@ -40,34 +35,19 @@ object HeaderValues {
 
   def encode(value: String): Either[DecodingError, String] =
     if (isPlainText(value) && !hasSentinel(value)) Right(value)
-    else {
-      val encoder = StandardCharsets.UTF_8
-        .newEncoder()
-        .onMalformedInput(CodingErrorAction.REPORT)
-        .onUnmappableCharacter(CodingErrorAction.REPORT)
-      try {
-        val buffer = encoder.encode(CharBuffer.wrap(value))
-        val bytes = new Array[Byte](buffer.remaining())
-        buffer.get(bytes)
-        Right(Prefix + Base64.getEncoder.encodeToString(bytes) + Suffix)
-      } catch {
-        case _: CharacterCodingException => Left(invalid)
-      }
-    }
+    else
+      HttpUtf8.encode(value).map { bytes =>
+        Prefix + Base64.getEncoder.encodeToString(bytes) + Suffix
+      }.left.map(_ => invalid)
 
   def decode(value: String): Either[DecodingError, String] =
     if (hasSentinel(value)) {
       val payload = value.substring(Prefix.length, value.length - Suffix.length)
       try {
         val bytes = Base64.getDecoder.decode(payload)
-        val decoder = StandardCharsets.UTF_8
-          .newDecoder()
-          .onMalformedInput(CodingErrorAction.REPORT)
-          .onUnmappableCharacter(CodingErrorAction.REPORT)
-        Right(decoder.decode(ByteBuffer.wrap(bytes)).toString)
+        HttpUtf8.decode(bytes).left.map(_ => invalid)
       } catch {
-        case _: IllegalArgumentException | _: CharacterCodingException =>
-          Left(invalid)
+        case _: IllegalArgumentException => Left(invalid)
       }
     } else if (isPlainText(value)) Right(value)
     else Left(invalid)

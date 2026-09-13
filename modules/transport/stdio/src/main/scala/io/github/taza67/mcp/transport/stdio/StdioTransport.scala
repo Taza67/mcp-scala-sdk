@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets
 
 import scala.util.control.NonFatal
 
+import io.github.taza67.mcp.codec.WireLimits
 import io.github.taza67.mcp.codec.circe.JsonCodec
 import io.github.taza67.mcp.codec.circe.JsonRpcCodec
 import io.github.taza67.mcp.codec.circe.McpCodec
@@ -181,40 +182,13 @@ case class StdioTransport(
     catch { case e: CharacterCodingException => Left(e) }
 
   /**
-   * Cheap pre-parse guard counting {} and [] depth while skipping string
-   * contents and backslash escapes. Validating the JSON itself remains the
-   * codec's job.
-   */
-  private def exceedsNesting(text: String): Boolean = {
-    var depth = 0
-    var inString = false
-    var escaped = false
-    var exceeded = false
-    var i = 0
-    while (!exceeded && i < text.length) {
-      val c = text.charAt(i)
-      if (inString) {
-        if (escaped) escaped = false
-        else if (c == '\\') escaped = true
-        else if (c == '"') inString = false
-      } else if (c == '"') inString = true
-      else if (c == '{' || c == '[') {
-        depth += 1
-        if (depth > maxNestingDepth) exceeded = true
-      } else if (c == '}' || c == ']') depth -= 1
-      i += 1
-    }
-    exceeded
-  }
-
-  /**
    * Handles one decoded frame: text decoding errors become an uncorrelated
    * ParseError; rejected requests become the error projected by
    * ServerRequests; anything else produces no output. A valid request is
    * handed to the server and its response encoded back onto `out`.
    */
   private def dispatchText(text: String, out: Writer, err: Writer): Unit =
-    if (exceedsNesting(text)) {
+    if (WireLimits.exceedsNesting(text, maxNestingDepth)) {
       writeResponse(out, ErrorResponse(InvalidRequestError(NestingLimitMessage)))
       writeDiagnostic(err, ErrorCode.InvalidRequest)
     } else
@@ -290,10 +264,10 @@ case class StdioTransport(
 object StdioTransport {
 
   /** Default maximum frame size: 8 MiB of UTF-8 bytes (UTF-16 units on Readers). */
-  val DefaultMaxMessageSize: Int = 8 * 1024 * 1024
+  val DefaultMaxMessageSize: Int = WireLimits.DefaultMaxMessageSize
 
   /** Default maximum JSON nesting depth per frame. */
-  val DefaultMaxNestingDepth: Int = 128
+  val DefaultMaxNestingDepth: Int = WireLimits.DefaultMaxNestingDepth
 
   private val SizeLimitMessage = "stdio message exceeds size limit"
   private val NestingLimitMessage = "stdio message exceeds nesting limit"

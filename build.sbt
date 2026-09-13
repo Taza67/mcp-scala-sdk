@@ -141,7 +141,7 @@ lazy val exampleStdio = (project in file("examples/stdio"))
   )
 
 lazy val transportHttp = (project in file("modules/transport/http"))
-  .dependsOn(server)
+  .dependsOn(server, codecCirce % "test->compile")
   .settings(
     name := "mcp-transport-http",
     publish / skip := true,

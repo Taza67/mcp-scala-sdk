@@ -27,6 +27,21 @@ case class ProgressNotificationParams(
     meta: Option[NotificationMeta] = None
 )
 
+object ProgressNotificationParams {
+
+  /** Wire key for the opaque progress token (shared with [[RequestMeta]]). */
+  val ProgressTokenKey: String = RequestMeta.ProgressTokenKey
+
+  /** Wire key for the progress-so-far number. */
+  val ProgressKey: String = "progress"
+
+  /** Wire key for the optional expected total. */
+  val TotalKey: String = "total"
+
+  /** Wire key for the optional human-readable status message. */
+  val MessageKey: String = "message"
+}
+
 /** Out-of-band progress update for a long-running request. */
 case class ProgressNotification(
     params: ProgressNotificationParams,
@@ -79,6 +94,18 @@ case class LoggingMessageNotificationParams(
     logger: Option[String] = None,
     meta: Option[NotificationMeta] = None
 )
+
+object LoggingMessageNotificationParams {
+
+  /** Wire key for the syslog severity level. */
+  val LevelKey: String = "level"
+
+  /** Wire key for the arbitrary log payload. */
+  val DataKey: String = "data"
+
+  /** Wire key for the optional logger name / category. */
+  val LoggerKey: String = "logger"
+}
 
 /** Log message from server to client.
  *

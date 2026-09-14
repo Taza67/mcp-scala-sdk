@@ -38,4 +38,32 @@ private[mcp] object PlainNotifications {
       case _ =>
         Left(DecodingError(s"Expected ${expected.value} notification"))
     }
+
+  /** Encode a notification whose `params` member is optional on the wire
+   *  (e.g. `list_changed` notifications), preserving `None` vs `Some`.
+   */
+  def fromOptionalNotification(
+      method: Method,
+      params: Option[NotificationParams],
+      jsonrpc: JsonRpcVersion
+  ): JsonObject =
+    Messages.fromNotification(
+      McpNotification(method = method, params = params, jsonrpc = jsonrpc)
+    )
+
+  /** Decode a notification whose `params` member is optional on the wire;
+   *  malformed or explicit-null `params` are rejected by the envelope codec.
+   */
+  def toOptionalNotification[A](
+      expected: Method,
+      message: JsonValue
+  )(
+      build: (Option[NotificationParams], JsonRpcVersion) => A
+  ): Either[DecodingError, A] =
+    Messages.toMessage(message).flatMap {
+      case McpNotification(`expected`, params, jsonrpc) =>
+        Right(build(params, jsonrpc))
+      case _ =>
+        Left(DecodingError(s"Expected ${expected.value} notification"))
+    }
 }

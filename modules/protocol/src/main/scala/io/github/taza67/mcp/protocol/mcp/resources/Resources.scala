@@ -269,6 +269,12 @@ case class ResourceUpdatedNotificationParams(
     meta: Option[NotificationMeta] = None
 )
 
+object ResourceUpdatedNotificationParams {
+
+  /** Wire key for the changed resource URI (shared with `resources/read`). */
+  val UriKey: String = ReadResourceRequestParams.UriKey
+}
+
 /** Notification that a subscribed resource changed and may need to be read again.
  *
  *  Sent only for URIs the client opted into via `resourceSubscriptions` on

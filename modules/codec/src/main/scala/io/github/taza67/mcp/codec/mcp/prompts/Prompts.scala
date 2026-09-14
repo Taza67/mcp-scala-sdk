@@ -7,6 +7,7 @@ import io.github.taza67.mcp.codec.mcp.Content
 import io.github.taza67.mcp.codec.mcp.ContinuationFields
 import io.github.taza67.mcp.codec.mcp.Input
 import io.github.taza67.mcp.codec.mcp.Meta
+import io.github.taza67.mcp.codec.mcp.PlainNotifications
 import io.github.taza67.mcp.codec.mcp.PlainRequests
 import io.github.taza67.mcp.codec.mcp.lists.PaginatedListResults
 import io.github.taza67.mcp.protocol.json.JsonObject
@@ -23,6 +24,7 @@ import io.github.taza67.mcp.protocol.mcp.prompts.GetPromptResult
 import io.github.taza67.mcp.protocol.mcp.prompts.ListPromptsResult
 import io.github.taza67.mcp.protocol.mcp.prompts.Prompt
 import io.github.taza67.mcp.protocol.mcp.prompts.PromptArgument
+import io.github.taza67.mcp.protocol.mcp.prompts.PromptListChangedNotification
 import io.github.taza67.mcp.protocol.mcp.prompts.PromptMessage
 
 
@@ -245,4 +247,23 @@ object Prompts {
 
   def toGetPromptOutcome(message: JsonObject): Either[DecodingError, RequestOutcome[GetPromptResult]] =
     Input.toRequestOutcome(message)(toGetPromptResult)
+
+  def fromPromptListChangedNotification(
+      notification: PromptListChangedNotification
+  ): JsonObject =
+    PlainNotifications.fromOptionalNotification(
+      method = PromptMethods.listChangedNotification,
+      params = notification.params,
+      jsonrpc = notification.jsonrpc
+    )
+
+  def toPromptListChangedNotification(
+      message: JsonValue
+  ): Either[DecodingError, PromptListChangedNotification] =
+    PlainNotifications.toOptionalNotification(
+      PromptMethods.listChangedNotification,
+      message
+    ) { (params, jsonrpc) =>
+      PromptListChangedNotification(params = params, jsonrpc = jsonrpc)
+    }
 }

@@ -7,6 +7,7 @@ import io.github.taza67.mcp.codec.mcp.Content
 import io.github.taza67.mcp.codec.mcp.ContinuationFields
 import io.github.taza67.mcp.codec.mcp.Input
 import io.github.taza67.mcp.codec.mcp.Meta
+import io.github.taza67.mcp.codec.mcp.PlainNotifications
 import io.github.taza67.mcp.codec.mcp.PlainRequests
 import io.github.taza67.mcp.codec.mcp.lists.PaginatedListResults
 import io.github.taza67.mcp.protocol.json.JsonNumber
@@ -15,9 +16,13 @@ import io.github.taza67.mcp.protocol.json.JsonString
 import io.github.taza67.mcp.protocol.json.JsonValue
 import io.github.taza67.mcp.protocol.mcp.MetaObject
 import io.github.taza67.mcp.protocol.mcp.Icon
+import io.github.taza67.mcp.protocol.mcp.NotificationParams
 import io.github.taza67.mcp.protocol.mcp.RequestOutcome
 import io.github.taza67.mcp.protocol.mcp.RequestParams
 import io.github.taza67.mcp.protocol.mcp.resources.{Resources => ResourceMethods}
+import io.github.taza67.mcp.protocol.mcp.resources.ResourceListChangedNotification
+import io.github.taza67.mcp.protocol.mcp.resources.ResourceUpdatedNotification
+import io.github.taza67.mcp.protocol.mcp.resources.ResourceUpdatedNotificationParams
 import io.github.taza67.mcp.protocol.mcp.resources.ListResourceTemplatesResult
 import io.github.taza67.mcp.protocol.mcp.resources.ListResourcesResult
 import io.github.taza67.mcp.protocol.mcp.resources.ReadResourceRequest
@@ -309,4 +314,60 @@ object Resources {
       message: JsonObject
   ): Either[DecodingError, RequestOutcome[ReadResourceResult]] =
     Input.toRequestOutcome(message)(toReadResourceResult)
+
+  def fromResourceListChangedNotification(
+      notification: ResourceListChangedNotification
+  ): JsonObject =
+    PlainNotifications.fromOptionalNotification(
+      method = ResourceMethods.listChangedNotification,
+      params = notification.params,
+      jsonrpc = notification.jsonrpc
+    )
+
+  def toResourceListChangedNotification(
+      message: JsonValue
+  ): Either[DecodingError, ResourceListChangedNotification] =
+    PlainNotifications.toOptionalNotification(
+      ResourceMethods.listChangedNotification,
+      message
+    ) { (params, jsonrpc) =>
+      ResourceListChangedNotification(params = params, jsonrpc = jsonrpc)
+    }
+
+  def fromResourceUpdatedNotificationParams(
+      params: ResourceUpdatedNotificationParams
+  ): NotificationParams =
+    NotificationParams(
+      meta = params.meta,
+      fields = JsonObject(
+        Map(ResourceUpdatedNotificationParams.UriKey -> JsonString(params.uri))
+      )
+    )
+
+  def toResourceUpdatedNotificationParams(
+      params: NotificationParams
+  ): Either[DecodingError, ResourceUpdatedNotificationParams] =
+    Fields
+      .requiredString(params.fields.value, ResourceUpdatedNotificationParams.UriKey)
+      .map(uri =>
+        ResourceUpdatedNotificationParams(uri = uri, meta = params.meta)
+      )
+
+  def fromResourceUpdatedNotification(
+      notification: ResourceUpdatedNotification
+  ): JsonObject =
+    PlainNotifications.fromNotification(
+      method = ResourceMethods.updatedNotification,
+      params = fromResourceUpdatedNotificationParams(notification.params),
+      jsonrpc = notification.jsonrpc
+    )
+
+  def toResourceUpdatedNotification(
+      message: JsonValue
+  ): Either[DecodingError, ResourceUpdatedNotification] =
+    PlainNotifications.toNotification(ResourceMethods.updatedNotification, message)(
+      toResourceUpdatedNotificationParams
+    ) { (params, jsonrpc) =>
+      ResourceUpdatedNotification(params = params, jsonrpc = jsonrpc)
+    }
 }

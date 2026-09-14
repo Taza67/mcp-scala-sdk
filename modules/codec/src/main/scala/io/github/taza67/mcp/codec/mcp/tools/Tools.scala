@@ -7,6 +7,7 @@ import io.github.taza67.mcp.codec.mcp.ContinuationFields
 import io.github.taza67.mcp.codec.mcp.Content
 import io.github.taza67.mcp.codec.mcp.Input
 import io.github.taza67.mcp.codec.mcp.Meta
+import io.github.taza67.mcp.codec.mcp.PlainNotifications
 import io.github.taza67.mcp.codec.mcp.PlainRequests
 import io.github.taza67.mcp.codec.mcp.lists.PaginatedListResults
 import io.github.taza67.mcp.protocol.json.JsonObject
@@ -24,6 +25,7 @@ import io.github.taza67.mcp.protocol.mcp.tools.ListToolsResult
 import io.github.taza67.mcp.protocol.mcp.tools.Tool
 import io.github.taza67.mcp.protocol.mcp.tools.ToolAnnotations
 import io.github.taza67.mcp.protocol.mcp.tools.ToolInputSchema
+import io.github.taza67.mcp.protocol.mcp.tools.ToolListChangedNotification
 import io.github.taza67.mcp.protocol.mcp.tools.ToolOutputSchema
 
 
@@ -284,4 +286,23 @@ object Tools {
       message: JsonObject
   ): Either[DecodingError, RequestOutcome[CallToolResult]] =
     Input.toRequestOutcome(message)(toCallToolResult)
+
+  def fromToolListChangedNotification(
+      notification: ToolListChangedNotification
+  ): JsonObject =
+    PlainNotifications.fromOptionalNotification(
+      method = ToolMethods.listChangedNotification,
+      params = notification.params,
+      jsonrpc = notification.jsonrpc
+    )
+
+  def toToolListChangedNotification(
+      message: JsonValue
+  ): Either[DecodingError, ToolListChangedNotification] =
+    PlainNotifications.toOptionalNotification(
+      ToolMethods.listChangedNotification,
+      message
+    ) { (params, jsonrpc) =>
+      ToolListChangedNotification(params = params, jsonrpc = jsonrpc)
+    }
 }

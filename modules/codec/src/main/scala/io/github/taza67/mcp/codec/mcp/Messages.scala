@@ -22,11 +22,8 @@ import io.github.taza67.mcp.protocol.mcp.McpSuccessResponse
  *  Domain façades: [[Content]] (content blocks), package [[lists]] (paginated
  *  lists), packages [[tools]] / [[resources]] / [[prompts]] / [[elicitation]] /
  *  [[discover]] / [[roots]] / [[sampling]] / [[completion]] (rich requests and
- *  results).
- *
- *  Deferred codec domains (protocol types exist; YAGNI for current cut — see
- *  ADR-0006): [[io.github.taza67.mcp.protocol.mcp.notifications]],
- *  [[io.github.taza67.mcp.protocol.mcp.subscriptions]].
+ *  results), [[notifications]] (cancelled / progress / logging messages), and
+ *  [[subscriptions]] (listen request, acknowledgement, stream teardown).
  */
 object Messages {
 

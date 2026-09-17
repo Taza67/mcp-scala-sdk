@@ -7,6 +7,9 @@ import io.github.taza67.mcp.protocol.jsonrpc.{JsonRpcVersion, JsonRpcVersion20, 
 object Subscriptions {
   val listen: Method = Method("subscriptions/listen")
   val acknowledgedNotification: Method = Method("notifications/subscriptions/acknowledged")
+
+  /** Wire key for the [[SubscriptionFilter]] object inside `params`. */
+  val NotificationsKey: String = "notifications"
 }
 
 /** Notification types a client may opt into on a `subscriptions/listen` stream.
@@ -26,6 +29,21 @@ case class SubscriptionFilter(
     resourcesListChanged: Option[Boolean] = None,
     resourceSubscriptions: Option[List[String]] = None
 )
+
+object SubscriptionFilter {
+
+  /** Wire key for the `notifications/tools/list_changed` opt-in flag. */
+  val ToolsListChangedKey: String = "toolsListChanged"
+
+  /** Wire key for the `notifications/prompts/list_changed` opt-in flag. */
+  val PromptsListChangedKey: String = "promptsListChanged"
+
+  /** Wire key for the `notifications/resources/list_changed` opt-in flag. */
+  val ResourcesListChangedKey: String = "resourcesListChanged"
+
+  /** Wire key for the `notifications/resources/updated` URI list. */
+  val ResourceSubscriptionsKey: String = "resourceSubscriptions"
+}
 
 /** Parameters for a `subscriptions/listen` request.
  *
@@ -62,6 +80,15 @@ case class SubscriptionsListenResultMeta(
     serverInfo: Option[Implementation] = None,
     extensions: MetaObject = MetaObject.empty
 )
+
+object SubscriptionsListenResultMeta {
+
+  /** Wire key for the subscription-stream id (shared with [[NotificationMeta]]). */
+  val SubscriptionIdKey: String = NotificationMeta.SubscriptionIdKey
+
+  /** All reserved wire keys; used to split/sanitize `extensions`. */
+  val ReservedKeys: Set[String] = ResultMeta.ReservedKeys + SubscriptionIdKey
+}
 
 /** Signals that a `subscriptions/listen` subscription ended gracefully.
  *

@@ -29,6 +29,9 @@ object ClientError {
   /** The request-id allocator cannot produce another distinct id. */
   case object RequestIdsExhausted extends ClientError
 
+  /** The configured transport cannot open request streams. */
+  case object StreamingUnsupported extends ClientError
+
   /** The peer returned a JSON-RPC error response for the request. */
   final case class RemoteError(error: Error) extends ClientError
 }

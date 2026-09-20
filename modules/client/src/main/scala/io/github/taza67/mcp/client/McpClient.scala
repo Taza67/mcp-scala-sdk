@@ -31,6 +31,9 @@ import io.github.taza67.mcp.protocol.mcp.completion.CompleteRequestParams
 import io.github.taza67.mcp.protocol.mcp.completion.CompleteResult
 import io.github.taza67.mcp.protocol.mcp.discover.DiscoverResult
 import io.github.taza67.mcp.protocol.mcp.discover.ServerDiscover
+import io.github.taza67.mcp.protocol.mcp.subscriptions.{Subscriptions => SubscriptionMethods}
+import io.github.taza67.mcp.protocol.mcp.subscriptions.SubscriptionsListenRequestParams
+import io.github.taza67.mcp.codec.mcp.subscriptions.{Subscriptions => SubscriptionsCodec}
 import io.github.taza67.mcp.protocol.mcp.tools.{Tools => ToolMethods}
 import io.github.taza67.mcp.protocol.mcp.tools.CallToolRequestParams
 import io.github.taza67.mcp.protocol.mcp.tools.CallToolResult
@@ -120,6 +123,48 @@ final case class McpClient(
       )
     }
 
+  /** Opens a validated pull stream for `method` when the configured transport
+   *  is a [[StreamingClientTransport]]; [[ClientError.StreamingUnsupported]]
+   *  otherwise. The request id is allocated only in the supported operation.
+   */
+  def stream(
+      method: Method,
+      params: McpRequestParams
+  ): Either[ClientError, ClientStream] =
+    openStream(method, params).map { case (request, source) =>
+      ClientStream.correlated(request, source)
+    }
+
+  /** Opens a `subscriptions/listen` stream gated on the server-acknowledged
+   *  notification filter.
+   */
+  def listen(
+      params: SubscriptionsListenRequestParams
+  ): Either[ClientError, ClientStream] =
+    openStream(
+      SubscriptionMethods.listen,
+      SubscriptionsCodec.fromSubscriptionsListenRequestParams(params)
+    ).map { case (request, source) =>
+      ClientStream.subscription(request, params.notifications, source)
+    }
+
+  private def openStream(
+      method: Method,
+      params: McpRequestParams
+  ): Either[ClientError, (McpRequest, ClientStream)] =
+    transport match {
+      case streaming: StreamingClientTransport =>
+        requestIds.next() match {
+          case Left(error) => Left(error)
+          case Right(id) =>
+            val wireRequest =
+              McpRequest(method = method, id = id, params = Some(params))
+            try streaming.open(wireRequest).map((wireRequest, _))
+            catch { case NonFatal(_) => Left(ClientError.TransportFailure) }
+        }
+      case _ => Left(ClientError.StreamingUnsupported)
+    }
+
   /** Runs `tools/call`; an input-required outcome is returned to the caller
    *  without retrying or issuing a second request.
    */
@@ -173,16 +218,11 @@ final case class McpClient(
       id: RequestId,
       response: McpResponse
   ): Either[ClientError, Result] =
-    response match {
-      case success: McpSuccessResponse =>
-        if (success.id == id) Right(success.result)
-        else Left(ClientError.ResponseIdMismatch)
-      case error: McpErrorResponse =>
-        error.id match {
-          case Some(responseId) if responseId == id =>
-            Left(ClientError.RemoteError(error.error))
-          case Some(_) => Left(ClientError.ResponseIdMismatch)
-          case None    => Left(ClientError.UncorrelatedResponse)
-        }
+    ClientResponses.validateId(id, response).flatMap { _ =>
+      response match {
+        case success: McpSuccessResponse => Right(success.result)
+        case error: McpErrorResponse     =>
+          Left(ClientError.RemoteError(error.error))
+      }
     }
 }

@@ -26,7 +26,7 @@ object HeaderValues {
       value.startsWith(Prefix) &&
       value.endsWith(Suffix)
 
-  private def isPlainText(value: String): Boolean =
+  private[http] def isPlainText(value: String): Boolean =
     (value.isEmpty ||
       (value.charAt(0) != ' ' && value.charAt(0) != '\t' &&
         value.charAt(value.length - 1) != ' ' &&

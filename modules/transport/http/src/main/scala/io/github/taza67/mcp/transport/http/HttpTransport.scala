@@ -29,8 +29,10 @@ import io.github.taza67.mcp.protocol.jsonrpc.SuccessResponse
  *  owns only the per-exchange request/response streams and always closes the
  *  exchange. Exact context-path match is required (JDK contexts prefix-match).
  *  Preflight runs before the body is read; input is bounded, strict-UTF-8,
- *  nesting-guarded, then decoded through the injected backend. Error bodies
- *  are id-less JSON-RPC error responses with JSON no-store headers.
+ *  nesting-guarded, then decoded through the injected backend. Adapter-level
+ *  parse/limit error bodies are id-less JSON-RPC errors (no request id was
+ *  established); request-level errors produced inside [[HttpEndpoint]] carry
+ *  the request's correlation id. JSON no-store headers accompany bodies.
  */
 final case class HttpTransport(
     endpoint: HttpEndpoint,

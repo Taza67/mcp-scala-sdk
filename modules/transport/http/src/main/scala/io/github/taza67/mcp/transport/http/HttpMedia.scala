@@ -23,12 +23,17 @@ private[http] object HttpMedia {
       .flatten
       .toList
 
-  /** Exactly one Content-Type of `application/json`; `charset` must be utf-8. */
-  def contentTypeOk(headers: Map[String, List[String]]): Boolean =
+  /** Exactly one Content-Type whose media type equals `expected`
+   *  (case-insensitive); `charset` must be utf-8 when present.
+   */
+  def contentTypeIs(
+      headers: Map[String, List[String]],
+      expected: String
+  ): Boolean =
     headerValues("content-type", headers) match {
       case value :: Nil =>
         parseMedia(value).exists { case (mediaType, params) =>
-          mediaType.equalsIgnoreCase("application/json") && {
+          mediaType.equalsIgnoreCase(expected) && {
             params.filter(_._1.equalsIgnoreCase("charset")) match {
               case Nil                   => true
               case (_, charset, _) :: Nil => charset.equalsIgnoreCase("utf-8")
@@ -38,6 +43,10 @@ private[http] object HttpMedia {
         }
       case _ => false
     }
+
+  /** Exactly one Content-Type of `application/json`; `charset` must be utf-8. */
+  def contentTypeOk(headers: Map[String, List[String]]): Boolean =
+    contentTypeIs(headers, "application/json")
 
   /** Accept must explicitly list `application/json` and `text/event-stream`. */
   def acceptOk(headers: Map[String, List[String]]): Boolean = {
@@ -88,7 +97,7 @@ private[http] object HttpMedia {
       case _ => None
     }
 
-  private def isTokenChar(c: Char): Boolean =
+  def isTokenChar(c: Char): Boolean =
     (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
       "!#$%&'*+-.^_`|~".indexOf(c) >= 0
 

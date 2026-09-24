@@ -762,4 +762,45 @@ class McpServerSuite extends FunSuite {
         fail(s"expected success response, got $other")
     }
   }
+
+  test("toolsListChanged flag is conditional on explicit opt-in") {
+    val tool = ServerTool(
+      Tool(name = "ping", inputSchema = ToolInputSchema()),
+      _ => Right(CallToolResult(content = Nil))
+    )
+    val discover = McpRequest(
+      method = ServerDiscover.method,
+      id = requestId,
+      params = Some(RequestParams(meta = requestMeta))
+    )
+    def toolsCapability(server: McpServer): Option[ToolsCapability] =
+      server.handle(discover) match {
+        case success: McpSuccessResponse =>
+          Discover.toDiscoverResult(success.result.fields) match {
+            case Right(result) => result.capabilities.tools
+            case Left(error)   => fail(s"discover decode failed: $error")
+          }
+        case other =>
+          fail(s"expected discover success, got $other")
+      }
+
+    val info = Implementation(name = "ex", version = "1")
+    // Default: unchanged capability (no listChanged).
+    assertEquals(
+      toolsCapability(McpServer(info = info, tools = Seq(tool))),
+      Some(ToolsCapability())
+    )
+    // Flag with no tools advertises no tools capability at all.
+    assertEquals(
+      toolsCapability(McpServer(info = info, toolsListChanged = true)),
+      None
+    )
+    // Flag + tools: explicit opt-in advertises listChanged.
+    assertEquals(
+      toolsCapability(
+        McpServer(info = info, tools = Seq(tool), toolsListChanged = true)
+      ),
+      Some(ToolsCapability(listChanged = Some(true)))
+    )
+  }
 }

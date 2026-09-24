@@ -62,18 +62,33 @@ object McpServer {
    *  when [[tools]] is non-empty. Registers `completion/complete` when
    *  [[completion]] is defined and advertises the completions capability in
    *  discovery. Duplicate tool names fail fast.
+   *
+   *  [[toolsListChanged]] advertises `tools.listChanged` in discovery; enable
+   *  it only when notifications are actually published (e.g. a
+   *  [[SubscriptionServer]] fronting this server whose hub grants
+   *  `toolsListChanged`). Other capability flags remain caller-built for
+   *  custom handlers.
    */
   def apply(
       info: Implementation,
       tools: Seq[ServerTool] = Seq.empty,
       instructions: Instructions = Instructions.none,
-      completion: Option[CompleteRequestParams => Either[Error, CompleteResult]] = None
+      completion: Option[CompleteRequestParams => Either[Error, CompleteResult]] = None,
+      toolsListChanged: Boolean = false
   ): McpServer = {
     val meta = Some(ResultMeta(serverInfo = Some(info)))
     val discoverHandler =
       Handler.of {
         case Some(_: RequestParams) =>
-          Right(discoverResult(tools, instructions, meta, completion.isDefined))
+          Right(
+            discoverResult(
+              tools,
+              instructions,
+              meta,
+              completion.isDefined,
+              toolsListChanged
+            )
+          )
         case _ =>
           Left(InvalidParamsError())
       }(Results.discoverResultEncoder)
@@ -112,14 +127,22 @@ object McpServer {
       tools: Seq[ServerTool],
       instructions: Instructions,
       meta: Option[ResultMeta],
-      hasCompletion: Boolean
+      hasCompletion: Boolean,
+      toolsListChanged: Boolean
   ): DiscoverResult =
     DiscoverResult(
       supportedVersions = List(McpProtocolVersion20260728.value),
       capabilities = ServerCapabilities(
         completions =
           if (hasCompletion) Some(JsonObject(Map.empty)) else None,
-        tools = if (tools.nonEmpty) Some(ToolsCapability()) else None
+        tools =
+          if (tools.nonEmpty)
+            Some(
+              ToolsCapability(
+                listChanged = if (toolsListChanged) Some(true) else None
+              )
+            )
+          else None
       ),
       ttlMs = 0L,
       cacheScope = PublicCacheScope,

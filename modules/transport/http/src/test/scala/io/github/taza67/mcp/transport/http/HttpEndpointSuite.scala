@@ -487,4 +487,59 @@ class HttpEndpointSuite extends FunSuite {
       k.equalsIgnoreCase("Mcp-Session-Id") || k.equalsIgnoreCase("Last-Event-ID")
     ))
   }
+
+  test("decodeRequest returns the validated request without dispatching") {
+    val server = new FakeServer(McpSuccessResponse(okResult, NumberRequestId(1)))
+    val endpoint = HttpEndpoint(server)
+    endpoint.decodeRequest(discoverHeaders, discoverBody) match {
+      case Right(request) =>
+        assertEquals(request.method.value, "server/discover")
+        assertEquals(request.id, NumberRequestId(1))
+      case Left(response) =>
+        fail(s"expected a decoded request, got $response")
+    }
+    // decodeRequest must never invoke the server.
+    assertEquals(server.calls, 0)
+  }
+
+  test("decodeRequest keeps header and version correlation on rejection") {
+    val server = new FakeServer(McpSuccessResponse(okResult, NumberRequestId(1)))
+    val endpoint = HttpEndpoint(server)
+    val mismatched = postHeaders(protocolVersion = "1999-01-01", method = "server/discover")
+    endpoint.decodeRequest(mismatched, discoverBody) match {
+      case Left(response) =>
+        assertEquals(response.status, 400)
+        // Correlated with the request id, as the dispatch path does.
+        assertEquals(response.body.get.value("id"), JsonNumber(1))
+      case Right(_) => fail("expected a header rejection")
+    }
+    assertEquals(server.calls, 0)
+  }
+
+  test("decodeRequest rejects notifications and responses as 400") {
+    val server = new FakeServer(McpSuccessResponse(okResult, NumberRequestId(1)))
+    val endpoint = HttpEndpoint(server)
+    val notification = JsonObject(
+      Map(
+        "jsonrpc" -> JsonString("2.0"),
+        "method" -> JsonString("notifications/vendor")
+      )
+    )
+    endpoint.decodeRequest(discoverHeaders, notification) match {
+      case Left(response) => assertEquals(response.status, 400)
+      case Right(_)       => fail("expected notification rejection")
+    }
+    val responseBody = JsonObject(
+      Map(
+        "jsonrpc" -> JsonString("2.0"),
+        "id" -> JsonNumber(1),
+        "result" -> JsonObject(Map.empty)
+      )
+    )
+    endpoint.decodeRequest(discoverHeaders, responseBody) match {
+      case Left(response) => assertEquals(response.status, 400)
+      case Right(_)       => fail("expected response rejection")
+    }
+    assertEquals(server.calls, 0)
+  }
 }

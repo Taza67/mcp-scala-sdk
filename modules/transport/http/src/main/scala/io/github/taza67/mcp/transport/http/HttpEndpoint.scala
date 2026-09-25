@@ -81,6 +81,30 @@ final case class HttpEndpoint(
         }
     }
 
+  /** Decodes an inbound JSON-RPC request body into an [[McpRequest]]
+   *  without dispatching it.
+   *
+   *  Reuses the trusted-envelope policy (params-stripped classification),
+   *  [[RequestHeaders]] validation, and [[ServerRequests]] boundary decode.
+   *  Notifications, inbound responses, and malformed envelopes all become a
+   *  `400` `InvalidRequest` response; header violations keep their existing
+   *  status and correlation id. [[preflight]] is not part of this helper:
+   *  callers must run it before the body is read.
+   */
+  def decodeRequest(
+      headers: Map[String, List[String]],
+      body: JsonValue
+  ): Either[HttpResponse, McpRequest] =
+    body match {
+      case obj: JsonObject =>
+        JsonRpcMessages.toMessage(JsonObject(obj.value - Message.ParamsKey)) match {
+          case Right(header: Request) =>
+            decodeRequestObject(header.id, obj, headers)
+          case _ => Left(jsonError(400, InvalidRequestError()))
+        }
+      case _ => Left(jsonError(400, InvalidRequestError()))
+    }
+
   private def checkOrigin(
       headers: Map[String, List[String]]
   ): Either[HttpResponse, Unit] =
@@ -95,29 +119,35 @@ final case class HttpEndpoint(
   /** Trusted envelope classification without `params`. */
   private def dispatch(obj: JsonObject, headers: Map[String, List[String]]): HttpResponse =
     JsonRpcMessages.toMessage(JsonObject(obj.value - Message.ParamsKey)) match {
-      case Right(header: Request) => handleRequest(header.id, obj, headers)
+      case Right(_: Request) =>
+        decodeRequest(headers, obj) match {
+          case Left(response) => response
+          case Right(request) => invoke(request)
+        }
       case Right(_: Notification) => handleNotification(obj)
       case _                      => jsonError(400, InvalidRequestError())
     }
 
-  private def handleRequest(
+  private def decodeRequestObject(
       id: RequestId,
       obj: JsonObject,
       headers: Map[String, List[String]]
-  ): HttpResponse =
+  ): Either[HttpResponse, McpRequest] =
     RequestHeaders.validate(obj, headers) match {
       case Left(error) =>
-        jsonError(HttpEndpoint.statusFor(error), error, Some(id))
+        Left(jsonError(HttpEndpoint.statusFor(error), error, Some(id)))
       case Right(()) =>
         ServerRequests.toRequest(obj) match {
           case Left(errorResponse) =>
-            jsonError(
-              HttpEndpoint.statusFor(errorResponse.error),
-              errorResponse.error,
-              errorResponse.id
+            Left(
+              jsonError(
+                HttpEndpoint.statusFor(errorResponse.error),
+                errorResponse.error,
+                errorResponse.id
+              )
             )
-          case Right(Some(request)) => invoke(request)
-          case Right(None)          => jsonError(400, InvalidRequestError())
+          case Right(Some(request)) => Right(request)
+          case Right(None)          => Left(jsonError(400, InvalidRequestError()))
         }
     }
 
@@ -192,7 +222,7 @@ object HttpEndpoint {
       uri.getPort <= 65535
   }
 
-  private def statusFor(error: Error): Int =
+  private[http] def statusFor(error: Error): Int =
     error.code match {
       case ErrorCode.ParseError | ErrorCode.InvalidRequest |
           ErrorCode.InvalidParams | ErrorCode.HeaderMismatch |

@@ -640,4 +640,23 @@ class ClientStreamSuite extends FunSuite {
     assert(closed.next().isRight, "expected the valid listen result")
     assertEquals(closed.next(), Right(None))
   }
+
+  test("a fatal pull keeps its identity when cleanup close also fails") {
+    val primary = new LinkageError("pull-fatal")
+    val closes = new AtomicInteger(0)
+    val source = new ClientStream {
+      def next(): Either[ClientError, Option[McpMessage]] = throw primary
+      def close(): Unit = {
+        closes.incrementAndGet()
+        throw new LinkageError("close-fatal")
+      }
+    }
+    val stream = ClientStream.correlated(request, source)
+    var observed: Throwable = null
+    try {
+      val _ = stream.next()
+    } catch { case thrown: Throwable => observed = thrown }
+    assertEquals(observed, primary)
+    assertEquals(closes.get(), 1)
+  }
 }

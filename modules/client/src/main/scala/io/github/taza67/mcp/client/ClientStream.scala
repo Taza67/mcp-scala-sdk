@@ -109,7 +109,7 @@ object ClientStream {
           catch {
             case NonFatal(_) => Left(ClientError.TransportFailure)
             case fatal: Throwable =>
-              closeSourceOnce()
+              preserveCloseOnFatal()
               throw fatal
           }
         // An explicit close racing the pull or the evaluation wins
@@ -162,6 +162,14 @@ object ClientStream {
           Right(())
         } catch { case NonFatal(_) => Left(ClientError.TransportFailure) }
       else Right(())
+
+    /** Runs source cleanup while a fatal is already propagating: a
+     *  secondary throwable is discarded so the original keeps its identity.
+     *  Only used on the fatal-propagation path.
+     */
+    private def preserveCloseOnFatal(): Unit =
+      try { val _ = closeSourceOnce() }
+      catch { case _: Throwable => () }
 
     /** Ordinary in-stream notification rules: a present `subscriptionId`
      *  must equal this request's id, `notifications/progress` must decode
@@ -244,7 +252,7 @@ object ClientStream {
           catch {
             case NonFatal(_) => fail()
             case fatal: Throwable =>
-              closeQuietly()
+              preserveCloseOnFatal()
               throw fatal
           }
         case other => other
@@ -355,6 +363,14 @@ object ClientStream {
     private def closeQuietly(): Unit =
       try inner.close()
       catch { case NonFatal(_) => () }
+
+    /** Runs cleanup while a fatal is already propagating: a secondary
+     *  throwable is discarded so the original keeps its identity. Only used
+     *  on the fatal-propagation path.
+     */
+    private def preserveCloseOnFatal(): Unit =
+      try closeQuietly()
+      catch { case _: Throwable => () }
 
     def close(): Unit = inner.close()
   }

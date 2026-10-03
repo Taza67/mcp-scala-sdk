@@ -408,7 +408,19 @@ class HttpTransportSuite extends FunSuite {
     List(
       () => HttpTransport(ep, dec, enc, 0, 128),
       () => HttpTransport(ep, dec, enc, 8, 0),
-      () => HttpTransport(ep, dec, enc, Int.MaxValue, 128)
+      () => HttpTransport(ep, dec, enc, Int.MaxValue, 128),
+      () => HttpTransport(ep, dec, enc, heartbeatInterval = Duration.ZERO),
+      () =>
+        HttpTransport(ep, dec, enc, heartbeatInterval = Duration.ofSeconds(-1)),
+      () =>
+        HttpTransport(
+          ep,
+          dec,
+          enc,
+          heartbeatInterval = Duration.ofDays(2000000000L)
+        ),
+      () => HttpTransport(ep, dec, enc, maxPendingMessages = 0),
+      () => HttpTransport(ep, dec, enc, maxPendingMessages = Int.MaxValue)
     ).foreach(f => intercept[IllegalArgumentException](f()))
 
     withServer(transport()) { uri =>

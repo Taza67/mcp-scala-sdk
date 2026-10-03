@@ -2,7 +2,6 @@ package io.github.taza67.mcp.transport.stdio
 
 import java.io.BufferedInputStream
 import java.io.BufferedReader
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -11,9 +10,6 @@ import java.io.PrintStream
 import java.io.PrintWriter
 import java.io.Reader
 import java.io.Writer
-import java.nio.ByteBuffer
-import java.nio.charset.CharacterCodingException
-import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 
 import scala.util.control.NonFatal
@@ -71,9 +67,15 @@ case class StdioTransport(
     val reader = new BufferedInputStream(in)
     val outWriter = outputWriterFor(out)
     val errWriter = outputWriterFor(err)
-    Iterator.continually(readByteFrame(reader))
-      .takeWhile(_ != EndOfInput)
-      .foreach(frame => dispatchFrame(frame, outWriter, errWriter))
+    var reading = true
+    while (reading)
+      StdioFrames.read(reader, maxMessageSize) match {
+        case Right(Some(text)) => dispatchText(text, outWriter, errWriter)
+        case Right(None)       => reading = false
+        case Left(error)       =>
+          writeResponse(outWriter, ErrorResponse(error))
+          writeDiagnostic(errWriter, error.code)
+      }
     checkedFlush(outWriter)
     checkedFlush(errWriter)
   }
@@ -88,41 +90,7 @@ case class StdioTransport(
     checkedFlush(err)
   }
 
-  /**
-   * Reads one frame of raw bytes terminated by LF or EOF. At most
-   * `maxMessageSize + 1` bytes are stored; once past the limit the rest of the
-   * frame is drained without counting so the guard cannot wrap on huge input.
-   * A single trailing CR is excluded from the size accounting. EOF with no
-   * pending bytes ends input.
-   */
-  private def readByteFrame(reader: BufferedInputStream): Frame = {
-    val buffer = new ByteArrayOutputStream()
-    var oversized = false
-    var eof = false
-    var done = false
-    var last = -1
-    while (!done) {
-      val unit = reader.read()
-      if (unit == -1) {
-        eof = true
-        done = true
-      } else if (unit == '\n') done = true
-      else {
-        last = unit
-        if (buffer.size() <= maxMessageSize) buffer.write(unit)
-        else oversized = true
-      }
-    }
-    val count = buffer.size()
-    if (count == 0 && eof) EndOfInput
-    else {
-      val effective = if (last == '\r') count - 1 else count
-      if (oversized || effective > maxMessageSize) OversizedFrame
-      else ByteFrame(buffer.toByteArray)
-    }
-  }
-
-  /** Same frame contract as readByteFrame, in UTF-16 code units. */
+  /** Same frame contract as the byte loop, in UTF-16 code units. */
   private def readCharFrame(reader: BufferedReader): Frame = {
     val buffer = new StringBuilder()
     var oversized = false
@@ -152,34 +120,12 @@ case class StdioTransport(
 
   private def dispatchFrame(frame: Frame, out: Writer, err: Writer): Unit =
     frame match {
-      case ByteFrame(bytes) =>
-        decodeUtf8(bytes) match {
-          case Right(text) => dispatchText(text, out, err)
-          case Left(_) =>
-            writeResponse(out, ErrorResponse(ParseError()))
-            writeDiagnostic(err, ErrorCode.ParseError)
-        }
       case CharFrame(text) => dispatchText(text, out, err)
       case OversizedFrame =>
         writeResponse(out, ErrorResponse(InvalidRequestError(SizeLimitMessage)))
         writeDiagnostic(err, ErrorCode.InvalidRequest)
       case EndOfInput => ()
     }
-
-  /** Strict UTF-8 decoding: malformed or unmappable input fails instead of replacing. */
-  private def decodeUtf8(
-      bytes: Array[Byte]
-  ): Either[CharacterCodingException, String] =
-    try
-      Right(
-        StandardCharsets.UTF_8
-          .newDecoder()
-          .onMalformedInput(CodingErrorAction.REPORT)
-          .onUnmappableCharacter(CodingErrorAction.REPORT)
-          .decode(ByteBuffer.wrap(bytes))
-          .toString
-      )
-    catch { case e: CharacterCodingException => Left(e) }
 
   /**
    * Handles one decoded frame: text decoding errors become an uncorrelated
@@ -275,7 +221,6 @@ object StdioTransport {
   private sealed trait Frame
   private case object EndOfInput extends Frame
   private case object OversizedFrame extends Frame
-  private case class ByteFrame(bytes: Array[Byte]) extends Frame
   private case class CharFrame(text: String) extends Frame
 
   /**

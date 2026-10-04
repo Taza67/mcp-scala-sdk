@@ -14,6 +14,10 @@ Your task is to finish the requested expanded SDK scope, with rigorous,
 behavior-focused verification and regular focused commits.
 
 First verify what code you actually received:
+0. If AGENTS.md or docs/handoff/STATE.md is missing, do not reconstruct this
+   project from an old README. Read the attached snapshot/docs/handoff/README.md
+   and import repository.bundle into a clean continuation branch first.
+   The archive includes the committed instructions and skills.
 1. Read AGENTS.md.
 2. Read docs/handoff/README.md, STATE.md, STDIO_REPAIR.md, ROADMAP.md,
    and FINAL_GATE.md in full.

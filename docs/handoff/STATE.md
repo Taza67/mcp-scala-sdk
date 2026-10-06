@@ -8,12 +8,10 @@ Only handoff preparation is authorized in the local session now.
 - Repository: `Taza67/mcp-scala-sdk`.
 - Branch at the engineering stop: `main`.
 - Last reviewed SDK commit: `05431df2586dfe7e84b13a6eb7a20bbf673ec2f1`.
-- Last observed remote `main`: `3dd757dc62109dc45fd0c64027f0abe1f66d07eb`.
-- A fresh remote read confirmed that reference before handoff preparation.
-- There were 39 unpushed SDK commits at that checkpoint.
-- The user subsequently authorized a push; consult the final manifest and a fresh
-  remote read for the actual delivered commit. Do not assume this old remote
-  checkpoint remains current.
+- Remote `main` after handoff push: `8a763c934d24b8fd4e60042fa0f0172128a10062`.
+- The 41 local SDK commits were pushed to `origin/main`; a normal clone retrieves them.
+- Verify the remote with a fresh read before assuming the checkpoint is current.
+
 The archive manifest is the source of truth for the exported commit and patch.
 Additional handoff documentation can make the delivered HEAD newer than the
 last SDK implementation checkpoint. Verify the supplied code and gate logs,

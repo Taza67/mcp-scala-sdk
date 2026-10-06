@@ -30,7 +30,8 @@ the client draft just because it has the latest committed HTTP transport.
 The accompanying archive includes `repository.bundle`, `working-tree.patch`,
 `manifest.json`, checksums, and selected verification logs. It contains no
 dependency cache, staged binaries, personal memory, or home-directory config.
-The git bundle is an additional recovery source even when GitHub is current.
+The git bundle is a recovery source; because the SDK commits are now on the
+remote, a normal clone followed by the working-tree patch is usually enough.
 
 Before importing anything:
 
@@ -53,9 +54,9 @@ git bundle verify /path/to/handoff/repository.bundle
 git fetch /path/to/handoff/repository.bundle main:refs/remotes/handoff/main
 ```
 
-On a clean compatible worktree, create a new continuation branch from
-`refs/remotes/handoff/main`, then check/apply the patch. If that branch already
-exists or the cloud worktree is dirty, inspect and preserve it; do not reset it.
+On a clean compatible worktree, checkout `main` and apply the patch. If the
+clone is stale relative to the pushed checkpoint, fast-forward or fetch first.
+If the cloud worktree is dirty, inspect and preserve it; do not reset it.
 Do not use force-push to resolve an import disagreement.
 
 ## Skills And Cloud Limitations
